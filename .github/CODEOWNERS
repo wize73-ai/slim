@@ -32,6 +32,15 @@
 /LICENSE                        @Wize73-JTC
 /.gitignore                     @Wize73-JTC
 
+# Locked: Python project + dependency manifest. Students cannot add deps —
+# they must open an issue tagged `needs-dep`. This kills the supply-chain
+# attack vector entirely.
+/pyproject.toml                 @Wize73-JTC
+/requirements.txt               @Wize73-JTC
+/requirements-dev.txt           @Wize73-JTC
+/uv.lock                        @Wize73-JTC
+/requirements-lock.txt          @Wize73-JTC
+
 # Locked: Codespaces environment spec.
 /.devcontainer/                 @Wize73-JTC
 /.devcontainer/**               @Wize73-JTC

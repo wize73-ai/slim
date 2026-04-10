@@ -52,3 +52,11 @@ id_ed25519
 
 # Codespaces local state
 .devcontainer/*.log
+
+# Local AI-tooling state — never check these in. They're per-developer
+# and would make every student's AI assistant try to use tools they don't
+# have. If we want curated AI instructions later, that's a separate decision.
+.gitnexus
+.claude/
+AGENTS.md
+CLAUDE.md

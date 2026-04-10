@@ -1,0 +1,21 @@
+# Pinned dev/test dependencies for the wize73 class chatbot.
+#
+# This file mirrors [project.optional-dependencies.dev] in pyproject.toml.
+# Install with:
+#     pip install -r requirements.txt -r requirements-dev.txt
+#
+# Source of truth: pyproject.toml. Same locking discipline as requirements.txt.
+#
+# These are the tools the 9 PR agents invoke (ruff, mypy, pytest, interrogate,
+# bandit, semgrep). Versions pinned to known-stable late-2024/early-2025
+# releases. Regenerate to current with:
+#     uv pip compile pyproject.toml --extra dev -o requirements-dev.txt --upgrade
+
+ruff==0.8.4
+mypy==1.14.0
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+interrogate==1.7.0
+bandit==1.8.0
+semgrep==1.100.0

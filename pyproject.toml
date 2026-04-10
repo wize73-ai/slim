@@ -1,0 +1,244 @@
+[project]
+name = "wize73-class-chatbot"
+version = "0.1.0"
+description = "Teaching project — AI chatbot with bidirectional token-flow + processing metrics, served at class.wize73.com"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "James Wilson", email = "jawarm24@gmail.com" }]
+keywords = ["chatbot", "teaching", "observability", "fastapi", "vllm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+]
+
+# Pinned to known-good late-2024/early-2025 versions. Regenerate with
+# `uv pip compile --upgrade pyproject.toml -o requirements.txt` to get current
+# versions before any deploy. The lockfile (uv.lock or requirements-lock.txt)
+# is generated separately and committed by an instructor.
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "jinja2==3.1.4",
+    "httpx==0.28.1",
+    "openai==1.58.1",
+    "tiktoken==0.8.0",
+    "psutil==6.1.1",
+    "python-multipart==0.0.20",
+    "PyYAML==6.0.2",
+    "pydantic==2.10.4",
+    "starlette==0.41.3",
+    "sse-starlette==2.2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.8.4",
+    "mypy==1.14.0",
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.0",
+    "pytest-cov==6.0.0",
+    "interrogate==1.7.0",
+    "bandit==1.8.0",
+    "semgrep==1.100.0",
+]
+
+[project.urls]
+Homepage = "https://class.wize73.com"
+Repository = "https://github.com/wize73-ai/slim"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core", "app"]
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Ruff — strict but auto-fixing. Catches AI slop (unused imports, hallucinated
+# names, dead code, broad exceptions, unidiomatic Python) before students push.
+# Failure messages get a "why this matters" attached from
+# core/agents/lint_explanations.yaml so the gate teaches.
+# ────────────────────────────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".venv", "venv", "build", "dist", ".pytest_cache", ".mypy_cache", ".ruff_cache"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes — catches unused imports + undefined names (AI hallucinations)
+    "I",      # isort — import ordering
+    "N",      # pep8-naming
+    "UP",     # pyupgrade — modern Python syntax (no `for i in range(len(x))`)
+    "B",      # bugbear — likely bugs (B008 mutable default args, etc.)
+    "C4",     # comprehensions — idiomatic
+    "SIM",    # simplification — catches AI verbosity
+    "C90",    # mccabe — cyclomatic complexity
+    "D",      # pydocstyle — docstring requirements
+    "ANN",    # flake8-annotations — type hints required
+    "RET",    # flake8-return — clean return statements
+    "ARG",    # flake8-unused-arguments
+    "PL",     # pylint subset
+    "TRY",    # tryceratops — exception handling discipline (no bare except)
+    "PERF",   # performance anti-patterns
+    "RUF",    # ruff's own meta-rules
+]
+ignore = [
+    "D203",   # conflicts with D211 (blank line before class docstring)
+    "D213",   # conflicts with D212 (multi-line docstring summary)
+    "ANN101", # missing-type-self — deprecated, remove from select instead
+    "ANN102", # missing-type-cls — deprecated
+    "TRY003", # long exception messages outside exception class — too restrictive
+    "PLR0913", # too many arguments — FastAPI handlers legitimately need many
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# core/ holds the locked observability and chat infrastructure.
+# Hold it to the strictest possible standard — students consume this code as
+# documentation by example, so it has to model good Python.
+"core/**/*.py" = []
+
+# app/ is student-editable. Be gentler so first PRs aren't graded on docstring
+# coverage of throwaway scripts. They still need types, lints, and no bugs;
+# we just don't insist on module-level docstrings in personas/ or templates/.
+"app/**/*.py" = [
+    "D100",   # missing module docstring
+    "D104",   # missing docstring in public package
+    "D107",   # missing docstring in __init__
+    "ANN401", # any-type — students learn to type strictly later
+]
+
+# Tests get even more leeway. Test code is its own genre.
+"tests/**/*.py" = [
+    "D",       # docstrings
+    "ANN",     # annotations
+    "PLR2004", # magic numbers in assertions
+    "S101",    # asserts (point of pytest)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 80
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Mypy — strict on core/, gentler on app/ student code.
+# ────────────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = "app.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+# Third-party packages without complete type stubs
+[[tool.mypy.overrides]]
+module = ["tiktoken.*", "sse_starlette.*"]
+ignore_missing_imports = true
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Pytest
+# ────────────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=core",
+    "--cov=app",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html:.coverage_html",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:pkg_resources",
+]
+markers = [
+    "slow: tests that take more than a second",
+    "integration: tests that touch external services (guapo, slim)",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["core", "app"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+precision = 1
+show_missing = true
+skip_covered = true
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Interrogate — docstring coverage gate
+# ────────────────────────────────────────────────────────────────────────────
+[tool.interrogate]
+fail-under = 80
+exclude = ["tests", "build", "dist", ".venv", "app"]
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = true
+ignore-private = true
+ignore-property-decorators = true
+ignore-semiprivate = false
+verbose = 2
+quiet = false
+color = true
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Bandit — security scan (used by agent 9 malicious-code-review)
+# ────────────────────────────────────────────────────────────────────────────
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "build", "dist"]
+skips = []  # don't skip anything by default
