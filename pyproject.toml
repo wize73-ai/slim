@@ -242,3 +242,19 @@ color = true
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "build", "dist"]
 skips = []  # don't skip anything by default
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Pyright — needs to know where the source root is for import resolution.
+# Pyright is what VS Code uses by default; mypy reads its own config above.
+# ────────────────────────────────────────────────────────────────────────────
+[tool.pyright]
+include = ["core", "app", "tests"]
+extraPaths = ["."]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingImports = "error"
+reportMissingTypeStubs = "none"
+reportUnusedExcept = "warning"
+# core/ holds the locked observability and security code — strictest standard
+strict = ["core"]
