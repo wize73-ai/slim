@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+*.egg-info/
+.tox/
+
+# Docker
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Local dev / secrets (NEVER commit these)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Testing artifacts
+.hypothesis/
+
+# Codespaces local state
+.devcontainer/*.log

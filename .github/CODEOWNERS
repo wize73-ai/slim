@@ -1,0 +1,41 @@
+# CODEOWNERS
+#
+# Every line maps a path pattern to the owner(s) whose approval is required
+# to merge changes to that path. Combined with branch protection, this makes
+# locked paths literally unmergeable without an instructor review.
+#
+# Students editing `app/` do NOT need an owner review — they can merge their
+# own PRs once the 9 agents are all green.
+#
+# Confirm or correct the handle below — pulled from the repo's initial LICENSE
+# copyright holder. If @Wize73-JTC is wrong, open a PR replacing all occurrences.
+
+# Locked: the measurement/observability core. Students consume, never edit.
+/core/                          @Wize73-JTC
+/core/**                        @Wize73-JTC
+
+# Locked: CI agents, deploy workflow, templates.
+/.github/                       @Wize73-JTC
+/.github/**                     @Wize73-JTC
+
+# Locked: container definitions, firewall, sidecar, agent proxy.
+/docker/                        @Wize73-JTC
+/docker/**                      @Wize73-JTC
+
+# Locked: documentation source, synced to GitHub wiki.
+/docs/                          @Wize73-JTC
+/docs/**                        @Wize73-JTC
+
+# Locked: top-level project docs and config.
+/README.md                      @Wize73-JTC
+/CONTRIBUTING.md                @Wize73-JTC
+/LICENSE                        @Wize73-JTC
+/.gitignore                     @Wize73-JTC
+
+# Locked: Codespaces environment spec.
+/.devcontainer/                 @Wize73-JTC
+/.devcontainer/**               @Wize73-JTC
+
+# Student-editable (no owner review required):
+#   /app/**
+#   /scripts/**  (with exceptions for the shipped scripts, see wiki)
