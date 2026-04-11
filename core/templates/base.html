@@ -1,0 +1,150 @@
+{# Locked base layout template. Shared by chat (student-editable), metrics
+   (locked), and ops (locked instructor-only). Students cannot edit this
+   file — it lives under core/ and is CODEOWNERS-protected — but their
+   own templates can extend it via `{% extends "base.html" %}`.
+
+   The nav always includes Chat + Metrics + Ops links. The Ops link is
+   rendered for everyone (Cloudflare Access gates actual access), but
+   clicking it without the instructor email will land on a Cloudflare
+   login prompt rather than the dashboard.
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}class.wize73.com{% endblock %}</title>
+<script src="https://unpkg.com/htmx.org@2.0.3" integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #d0d0d0;
+    --accent: #2a6ebb;
+    --nav-bg: #1f2937;
+    --nav-fg: #e5e7eb;
+    --nav-active: #ffffff;
+    --nav-link: #93c5fd;
+    --ok: #16a34a;
+    --warn: #ca8a04;
+    --err: #dc2626;
+    --crit: #991b1b;
+    --code-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.5;
+  }
+  nav.top {
+    background: var(--nav-bg);
+    color: var(--nav-fg);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  nav.top .brand {
+    font-weight: 600;
+    color: var(--nav-active);
+    margin-right: 1rem;
+  }
+  nav.top a {
+    color: var(--nav-link);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+  nav.top a:hover { background: rgba(255,255,255,0.08); }
+  nav.top a.active { color: var(--nav-active); background: rgba(255,255,255,0.12); }
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+  h1, h2, h3 { color: var(--fg); }
+  h1 { font-size: 1.5rem; margin-top: 0; }
+  h2 { font-size: 1.2rem; margin-top: 1.5rem; }
+  p { color: var(--fg); }
+  p.subtle { color: var(--muted); font-size: 0.9rem; }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.875rem; }
+  code { background: var(--code-bg); padding: 0.1rem 0.3rem; border-radius: 3px; }
+  pre {
+    background: var(--code-bg);
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  button, input[type=submit] {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(0.9); }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  textarea, input[type=text] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  textarea { resize: vertical; }
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge.ok { background: #dcfce7; color: var(--ok); }
+  .badge.warn { background: #fef3c7; color: var(--warn); }
+  .badge.err { background: #fee2e2; color: var(--err); }
+  .badge.crit { background: #991b1b; color: white; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
+  th { background: #fafafa; font-weight: 600; }
+  .bar { height: 0.75rem; background: var(--accent); border-radius: 2px; }
+  .bar.system { background: #8b5cf6; }
+  .bar.persona { background: #ec4899; }
+  .bar.examples { background: #f59e0b; }
+  .bar.history { background: #10b981; }
+  .bar.user { background: #3b82f6; }
+  .bar.output { background: #ef4444; }
+  {% block extra_css %}{% endblock %}
+</style>
+</head>
+<body>
+<nav class="top">
+  <span class="brand">class.wize73.com</span>
+  <a href="/" class="{% if active == 'chat' %}active{% endif %}">Chat</a>
+  <a href="/metrics" class="{% if active == 'metrics' %}active{% endif %}">Metrics</a>
+  <a href="/ops" class="{% if active == 'ops' %}active{% endif %}">Ops</a>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

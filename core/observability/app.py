@@ -21,9 +21,12 @@ plus the projection POST which is a pure function of its inputs.
 from __future__ import annotations
 
 from dataclasses import asdict
+from pathlib import Path as FsPath
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from core.observability.guapo_provider import GuapoStatsProvider, IndirectProvider
@@ -36,6 +39,14 @@ from core.observability.records import TurnRecord
 from core.observability.ring_buffer import RingBuffer
 from core.observability.slim_stats import SlimStatsClient
 from core.timing import set_emitter
+
+# Template search path: observability templates + the shared core/templates
+# (base.html) used by every locked sub-app.
+_CORE_DIR = FsPath(__file__).resolve().parent.parent
+_TEMPLATE_DIRS = [
+    str(_CORE_DIR / "observability" / "templates"),
+    str(_CORE_DIR / "templates"),
+]
 
 
 class MetricsState:
@@ -93,12 +104,53 @@ def create_metrics_app(state: MetricsState | None = None) -> FastAPI:
     # importing this module doesn't have side effects.
     set_emitter(state.ring_buffer.accept_timing_record)
 
+    templates = Jinja2Templates(directory=_TEMPLATE_DIRS)
+
     metrics_app = FastAPI(title="metrics", docs_url=None, redoc_url=None)
+
+    @metrics_app.get("/", response_class=HTMLResponse)
+    async def metrics_home(request: Request) -> HTMLResponse:
+        """Full metrics dashboard page (extends base.html)."""
+        return templates.TemplateResponse(
+            request=request,
+            name="metrics.html",
+            context={},
+        )
 
     @metrics_app.get("/healthz")
     async def healthz() -> dict[str, str]:
         """Liveness for the metrics sub-app itself."""
         return {"status": "ok", "buffer_size": str(len(state.ring_buffer))}
+
+    @metrics_app.get("/live", response_class=HTMLResponse)
+    async def live_turns(request: Request, limit: int = 20) -> HTMLResponse:
+        """HTMX partial: the live turn-by-turn table, polled every 3s."""
+        turns = state.ring_buffer.recent(limit)
+        return templates.TemplateResponse(
+            request=request,
+            name="_live.html",
+            context={"turns": list(turns)},
+        )
+
+    @metrics_app.get("/stats/guapo/html", response_class=HTMLResponse)
+    async def stats_guapo_html(request: Request) -> HTMLResponse:
+        """HTMX partial: guapo stats panel, polled every 5s."""
+        stats = await state.guapo_provider.fetch()
+        return templates.TemplateResponse(
+            request=request,
+            name="_stats_guapo.html",
+            context={"stats": stats},
+        )
+
+    @metrics_app.get("/stats/slim/html", response_class=HTMLResponse)
+    async def stats_slim_html(request: Request) -> HTMLResponse:
+        """HTMX partial: slim host panel, polled every 5s."""
+        stats = await state.slim_client.fetch()
+        return templates.TemplateResponse(
+            request=request,
+            name="_stats_slim.html",
+            context={"stats": stats, "available": stats is not None},
+        )
 
     @metrics_app.get("/turns")
     async def get_turns(limit: int = 100) -> dict[str, Any]:

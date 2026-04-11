@@ -1,0 +1,32 @@
+{# Live partial for the guapo panel — indirect stats from the frozen surface. #}
+<table>
+  <tr>
+    <td>health</td>
+    <td>
+      {% if stats.healthy %}
+        <span class="badge ok">ok</span>
+      {% else %}
+        <span class="badge err">unreachable</span>
+      {% endif %}
+    </td>
+  </tr>
+  <tr><td>whisper loaded</td><td>{{ "yes" if stats.whisper_loaded else "no" }}</td></tr>
+  <tr><td>tts loaded</td><td>{{ "yes" if stats.tts_loaded else "no" }}</td></tr>
+  <tr>
+    <td>health RTT (60s avg)</td>
+    <td>{% if stats.health_rtt_ms_60s_avg is not none %}{{ stats.health_rtt_ms_60s_avg | round(1) }} ms{% else %}—{% endif %}</td>
+  </tr>
+  <tr>
+    <td>queue signal (RTT stddev)</td>
+    <td>{% if stats.health_rtt_ms_60s_stddev is not none %}{{ stats.health_rtt_ms_60s_stddev | round(1) }} ms{% else %}—{% endif %}</td>
+  </tr>
+  <tr>
+    <td>last chat TTFT</td>
+    <td>{% if stats.last_chat_ttft_ms is not none %}{{ stats.last_chat_ttft_ms | round(0) | int }} ms{% else %}—{% endif %}</td>
+  </tr>
+  <tr>
+    <td>last chat tok/s</td>
+    <td>{% if stats.last_chat_decode_tok_per_sec is not none %}{{ stats.last_chat_decode_tok_per_sec | round(1) }}{% else %}—{% endif %}</td>
+  </tr>
+  <tr><td>models available</td><td>{{ stats.models_available }}</td></tr>
+</table>

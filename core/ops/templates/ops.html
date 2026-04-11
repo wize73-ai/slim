@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set active = "ops" %}
+
+{% block title %}Ops · class.wize73.com{% endblock %}
+
+{% block extra_css %}
+  .event-row { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .event-row.info { border-left: 4px solid var(--ok); }
+  .event-row.warning { border-left: 4px solid var(--warn); background: #fefce8; }
+  .event-row.error { border-left: 4px solid var(--err); background: #fef2f2; }
+  .event-row.critical { border-left: 4px solid var(--crit); background: #fee2e2; font-weight: 500; }
+  .event-meta { color: var(--muted); font-size: 0.75rem; }
+  .kill-switch { padding: 1rem; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 0.75rem; }
+  .kill-switch.active { background: #fee2e2; border-color: var(--err); }
+  .kill-switch h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+  .kill-switch p { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--muted); }
+  .kill-switch button { font-size: 0.85rem; padding: 0.3rem 0.75rem; }
+{% endblock %}
+
+{% block content %}
+<h1>Ops</h1>
+<p class="subtle">
+  Instructor-only. Live event stream + kill switches. Keep this tab
+  open in another window during class.
+</p>
+
+<div class="grid-2">
+  <div class="card">
+    <h2 style="margin-top:0">Live events</h2>
+    <p class="subtle" style="margin-top:0">
+      Newest at top. Polls every 2s.
+    </p>
+    <div id="event-feed"
+         hx-get="/ops/events/html"
+         hx-trigger="load, every 2s"
+         hx-swap="innerHTML">
+      <p class="subtle">loading…</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Kill switches</h2>
+
+    <div class="kill-switch">
+      <h3>Pause agent inference proxy</h3>
+      <p>Returns 503 to all CI LLM calls, freeing guapo for students.</p>
+      <button hx-post="/ops/switches/pause_agent_inference/flip" hx-swap="none">Toggle</button>
+    </div>
+
+    <div class="kill-switch">
+      <h3>Pause deploys</h3>
+      <p>Halts the deploy-on-main workflow. Use when locking the live state.</p>
+      <button hx-post="/ops/switches/pause_deploys/flip" hx-swap="none">Toggle</button>
+    </div>
+
+    <div class="kill-switch">
+      <h3>Panic stop app</h3>
+      <p>Chat handler returns maintenance mode. External watchdog will take down the container.</p>
+      <button hx-post="/ops/switches/panic_stop_app/flip" hx-swap="none">Toggle</button>
+    </div>
+
+    <div class="kill-switch">
+      <h3>Reload firewall (one-shot)</h3>
+      <p>Signals an external watcher to re-apply nftables rules. Auto-resets.</p>
+      <button hx-post="/ops/switches/reload_firewall/flip" hx-swap="none">Trigger</button>
+    </div>
+
+    <h3 style="margin-top:1.5rem; font-size:0.9rem">Current state</h3>
+    <div hx-get="/ops/switches/html" hx-trigger="load, every 3s" hx-swap="innerHTML"></div>
+  </div>
+</div>
+
+<p class="subtle" style="margin-top:2rem">
+  Raw JSON endpoints: <a href="/ops/events.json"><code>/ops/events.json</code></a>
+  (same stream Claude sees via curl co-monitoring) ·
+  <a href="/ops/switches"><code>/ops/switches</code></a>
+</p>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% if events %}
+  {% for e in events | reverse %}
+  <div class="event-row {{ e.severity }}">
+    <span class="badge {% if e.severity == 'info' %}ok{% elif e.severity == 'warning' %}warn{% elif e.severity == 'error' %}err{% else %}crit{% endif %}">{{ e.severity }}</span>
+    <strong>{{ e.source }}</strong> · {{ e.kind }}<br>
+    {{ e.summary }}
+    <div class="event-meta">{{ e.id[:8] }}</div>
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="subtle">no events yet</p>
+{% endif %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active = "metrics" %}
+
+{% block title %}Metrics · class.wize73.com{% endblock %}
+
+{% block content %}
+<h1>Metrics</h1>
+<p class="subtle">
+  Live measurement of every chat turn.
+  Polls every 3 seconds — you don't need to refresh.
+</p>
+
+<div class="card">
+  <h2 style="margin-top:0">Token flow by turn</h2>
+  <p class="subtle" style="margin-top:0">
+    Each row shows one chat turn decomposed into the labelled slots
+    that fed into the request, plus the output token count. Compare
+    rows to see what your changes cost per turn, forever.
+  </p>
+  <div hx-get="/metrics/live" hx-trigger="load, every 3s" hx-swap="innerHTML">
+    <p class="subtle">loading…</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2 style="margin-top:0">guapo (inference)</h2>
+    <div hx-get="/metrics/stats/guapo/html" hx-trigger="load, every 5s" hx-swap="innerHTML">
+      <p class="subtle">probing…</p>
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">slim (app host)</h2>
+    <div hx-get="/metrics/stats/slim/html" hx-trigger="load, every 5s" hx-swap="innerHTML">
+      <p class="subtle">probing…</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Projection calculator</h2>
+  <p class="subtle" style="margin-top:0">
+    Enter a planned architecture — the coefficients come from real
+    measurements in the ring buffer as the class uses the system.
+    Compare the projection to what you actually get.
+  </p>
+  <form id="proj-form"
+        hx-post="/metrics/projection"
+        hx-ext="json-enc"
+        hx-target="#proj-result"
+        hx-swap="innerHTML">
+    <div class="grid-2">
+      <div>
+        <label>system tokens <input type="number" name="system_tokens" value="150" min="0"></label><br>
+        <label>persona tokens <input type="number" name="persona_tokens" value="80" min="0"></label><br>
+        <label>few-shot count <input type="number" name="few_shot_count" value="2" min="0"></label><br>
+        <label>avg few-shot size <input type="number" name="avg_few_shot_tokens" value="70" min="0"></label><br>
+      </div>
+      <div>
+        <label>history retention turns <input type="number" name="history_retention_turns" value="5" min="0"></label><br>
+        <label>avg user message tokens <input type="number" name="avg_user_msg_tokens" value="25" min="1"></label><br>
+        <label>avg assistant reply tokens <input type="number" name="avg_assistant_reply_tokens" value="80" min="1"></label><br>
+        <label>planned turns <input type="number" name="planned_turns" value="15" min="1" max="200"></label><br>
+      </div>
+    </div>
+    <button type="submit" style="margin-top:0.5rem">Project</button>
+  </form>
+  <div id="proj-result" style="margin-top:1rem"></div>
+</div>
+
+<p class="subtle" style="margin-top:2rem">
+  Raw JSON endpoints for scripting:
+  <a href="/metrics/turns"><code>/metrics/turns</code></a> ·
+  <a href="/metrics/stats/guapo"><code>/metrics/stats/guapo</code></a> ·
+  <a href="/metrics/stats/slim"><code>/metrics/stats/slim</code></a>
+</p>
+{% endblock %}

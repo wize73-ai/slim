@@ -1,0 +1,67 @@
+{# HTMX partial: the live turn-by-turn table for the metrics tab.
+   Refreshed every 3 seconds via hx-trigger. Zero state-ful JS —
+   Jinja renders the whole thing server-side each poll.
+#}
+{% if turns %}
+<table>
+  <thead>
+    <tr>
+      <th style="width: 3rem">#</th>
+      <th>Input decomposition</th>
+      <th style="width: 4rem">Input</th>
+      <th style="width: 4rem">Output</th>
+      <th style="width: 5rem">Total (ms)</th>
+      <th style="width: 5rem">Prefill</th>
+      <th style="width: 5rem">Decode</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for turn in turns %}
+    <tr>
+      <td>{{ turn.turn_index }}</td>
+      <td>
+        {# Pyramid bar: each slot as a proportional segment of the row. #}
+        {% set total = turn.flow.input_total if turn.flow.input_total > 0 else 1 %}
+        <div style="display: flex; gap: 1px; height: 0.875rem; width: 100%">
+          {% if turn.flow.system_tokens > 0 %}
+            <div class="bar system"
+                 style="width: {{ (100 * turn.flow.system_tokens / total) | round(1) }}%"
+                 title="system: {{ turn.flow.system_tokens }}"></div>
+          {% endif %}
+          {% if turn.flow.examples_tokens > 0 %}
+            <div class="bar examples"
+                 style="width: {{ (100 * turn.flow.examples_tokens / total) | round(1) }}%"
+                 title="examples: {{ turn.flow.examples_tokens }}"></div>
+          {% endif %}
+          {% if turn.flow.history_tokens > 0 %}
+            <div class="bar history"
+                 style="width: {{ (100 * turn.flow.history_tokens / total) | round(1) }}%"
+                 title="history: {{ turn.flow.history_tokens }}"></div>
+          {% endif %}
+          {% if turn.flow.user_tokens > 0 %}
+            <div class="bar user"
+                 style="width: {{ (100 * turn.flow.user_tokens / total) | round(1) }}%"
+                 title="user: {{ turn.flow.user_tokens }}"></div>
+          {% endif %}
+        </div>
+      </td>
+      <td>{{ turn.flow.input_total }}</td>
+      <td>{{ turn.flow.output_tokens }}</td>
+      <td>{{ (turn.timing.total_ns / 1000000) | round(0) | int }}</td>
+      <td>{% if turn.timing.prefill_ns is not none %}{{ (turn.timing.prefill_ns / 1000000) | round(0) | int }}{% else %}—{% endif %}</td>
+      <td>{% if turn.timing.decode_ns is not none %}{{ (turn.timing.decode_ns / 1000000) | round(0) | int }}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p class="subtle" style="font-size: 0.75rem; margin-top: 0.5rem">
+  Legend:
+  <span class="bar system" style="display:inline-block; width:1rem; height:0.6rem"></span> system
+  <span class="bar examples" style="display:inline-block; width:1rem; height:0.6rem; margin-left:0.5rem"></span> examples
+  <span class="bar history" style="display:inline-block; width:1rem; height:0.6rem; margin-left:0.5rem"></span> history
+  <span class="bar user" style="display:inline-block; width:1rem; height:0.6rem; margin-left:0.5rem"></span> user
+</p>
+{% else %}
+<p class="subtle">No turns yet. Have a conversation on the <a href="/">Chat</a> tab and they'll show up here.</p>
+{% endif %}

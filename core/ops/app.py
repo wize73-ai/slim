@@ -23,9 +23,12 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path as FsPath
 from typing import Annotated, Any, AsyncIterator
 
-from fastapi import Depends, FastAPI, HTTPException, Path
+from fastapi import Depends, FastAPI, HTTPException, Path, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
@@ -37,6 +40,13 @@ from core.ops.events import (
     EventStream,
 )
 from core.ops.kill_switches import KillSwitch, KillSwitchManager
+
+# Template search path: ops templates + the shared core/templates (base.html)
+_CORE_DIR = FsPath(__file__).resolve().parent.parent
+_TEMPLATE_DIRS = [
+    str(_CORE_DIR / "ops" / "templates"),
+    str(_CORE_DIR / "templates"),
+]
 
 
 class OpsState:
@@ -96,7 +106,52 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
     if state is None:
         state = OpsState()
 
+    templates = Jinja2Templates(directory=_TEMPLATE_DIRS)
+
     ops_app = FastAPI(title="ops", docs_url=None, redoc_url=None)
+
+    # ─── HTML dashboard ───────────────────────────────────────────────────
+
+    @ops_app.get("/", response_class=HTMLResponse)
+    async def ops_home(
+        request: Request,
+        identity: Annotated[str, Depends(require_ops_auth)],
+    ) -> HTMLResponse:
+        """Full ops dashboard page (instructor auth required)."""
+        del identity
+        return templates.TemplateResponse(
+            request=request,
+            name="ops.html",
+            context={},
+        )
+
+    @ops_app.get("/events/html", response_class=HTMLResponse)
+    async def events_html(
+        request: Request,
+        identity: Annotated[str, Depends(require_ops_auth)],
+        limit: int = 50,
+    ) -> HTMLResponse:
+        """HTMX partial: live event feed, polled every 2s."""
+        del identity
+        events = state.events.recent(limit)
+        return templates.TemplateResponse(
+            request=request,
+            name="_events.html",
+            context={"events": [e.to_json_dict() for e in events]},
+        )
+
+    @ops_app.get("/switches/html", response_class=HTMLResponse)
+    async def switches_html(
+        request: Request,
+        identity: Annotated[str, Depends(require_ops_auth)],
+    ) -> HTMLResponse:
+        """HTMX partial: kill switch current state, polled every 3s."""
+        del identity
+        return templates.TemplateResponse(
+            request=request,
+            name="_switches.html",
+            context={"switches": state.switches.snapshot()},
+        )
 
     # ─── liveness ─────────────────────────────────────────────────────────
 

@@ -1,0 +1,27 @@
+{# Live partial for the slim panel — sidecar stats. #}
+{% if not available %}
+  <p class="subtle">slim host stats sidecar unavailable</p>
+{% else %}
+<table>
+  <tr>
+    <td>CPU</td>
+    <td>{{ stats.cpu_utilization_pct | round(1) }}% (load {{ stats.cpu_load_1m | round(2) }}/{{ stats.cpu_load_5m | round(2) }}/{{ stats.cpu_load_15m | round(2) }})</td>
+  </tr>
+  <tr>
+    <td>RAM</td>
+    <td>{{ stats.mem_used_mb }} / {{ stats.mem_total_mb }} MB ({{ (100 * stats.mem_used_mb / stats.mem_total_mb) | round(0) | int }}%)</td>
+  </tr>
+  <tr>
+    <td>Disk</td>
+    <td>{{ stats.disk_used_gb | round(1) }} / {{ stats.disk_total_gb | round(1) }} GB ({{ (100 * stats.disk_used_gb / stats.disk_total_gb) | round(0) | int }}%)</td>
+  </tr>
+  <tr>
+    <td>Network rx / tx</td>
+    <td>{{ (stats.net_rx_bytes_per_sec / 1024) | round(1) }} / {{ (stats.net_tx_bytes_per_sec / 1024) | round(1) }} KB/s</td>
+  </tr>
+  <tr>
+    <td>Uptime</td>
+    <td>{{ (stats.uptime_sec / 3600) | round(1) }} hours</td>
+  </tr>
+</table>
+{% endif %}

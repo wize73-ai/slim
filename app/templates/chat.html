@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% set active = "chat" %}
+
+{% block title %}Chat · class.wize73.com{% endblock %}
+
+{% block content %}
+<h1>class chatbot <span class="badge warn">v1 — dumb</span></h1>
+
+<p class="subtle">
+  Single turn. No memory. No persona. No streaming. No style. The
+  <a href="/metrics">metrics tab</a> shows you what each change you make
+  costs. Make this chatbot better — every feature you add shows up
+  measurable in the metrics.
+</p>
+
+<div class="card">
+  <form hx-post="/chat"
+        hx-target="#response"
+        hx-swap="innerHTML"
+        hx-disabled-elt="textarea, button"
+        hx-indicator="#loading">
+    <label for="message"><strong>Say something:</strong></label>
+    <textarea id="message" name="user_message" rows="3"
+              placeholder="Ask the dumb v1 chatbot a question..."
+              required></textarea>
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem;">
+      <button type="submit">Send</button>
+      <span id="loading" class="htmx-indicator subtle">waiting on guapo…</span>
+    </div>
+  </form>
+</div>
+
+<div id="response">
+  <p class="subtle">Responses will appear here. Nothing's been said yet.</p>
+</div>
+
+<h2>What this chatbot doesn't do</h2>
+<p class="subtle">
+  Each of these is a starter issue in the <a href="/docs/wiki/07-Feature-Backlog">Feature Backlog</a>.
+  Pick one and ship it.
+</p>
+<ul class="subtle">
+  <li>No conversation history — every turn starts from nothing</li>
+  <li>No persona — every response sounds the same bland way</li>
+  <li>No few-shot examples — the model has no style to copy</li>
+  <li>No streaming — you wait for the entire response before seeing anything</li>
+  <li>No content filter — hopes and prayers on the student input side</li>
+  <li>No voice input — whisper-large-v3-turbo is available on the frozen surface</li>
+  <li>No voice output — XTTS-v2 is also available on the frozen surface</li>
+  <li>No styling to speak of — the default CSS is the default CSS</li>
+</ul>
+
+<style>
+  .htmx-indicator { opacity: 0; transition: opacity 0.2s; }
+  .htmx-request .htmx-indicator { opacity: 1; }
+  .assistant-response { padding: 1rem; background: white; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
+  .assistant-response pre { background: transparent; border: none; padding: 0; white-space: pre-wrap; font-family: inherit; }
+  .assistant-response.error { background: #fef2f2; border-color: var(--err); color: var(--err); }
+</style>
+{% endblock %}

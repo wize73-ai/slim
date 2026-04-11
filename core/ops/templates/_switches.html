@@ -1,0 +1,12 @@
+{% for name, state in switches.items() %}
+<div style="font-size:0.85rem; padding:0.25rem 0;">
+  {% if state.active %}
+    <span class="badge crit">{{ name }}</span>
+  {% else %}
+    <span class="badge ok">{{ name }}</span>
+  {% endif %}
+  {% if state.set_by %}
+    <span class="event-meta"> by {{ state.set_by }}</span>
+  {% endif %}
+</div>
+{% endfor %}
