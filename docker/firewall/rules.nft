@@ -1,0 +1,65 @@
+# nftables egress allow-list for the wize73 app container's network.
+#
+# This is the load-bearing line of defense for malicious or broken
+# student code that slips past the 9 PR agents. The app container's
+# bridge network (`wize73-net`, default subnet 172.28.0.0/24) is
+# allowed to reach exactly:
+#
+#   - Guapo's Tailscale IP (100.91.130.128:8000)
+#   - The cloudflared agent on localhost (for tunneling responses out)
+#   - The local DNS stub at 127.0.0.53:53
+#   - The internal docker network for sidecar + agent-proxy traffic
+#
+# Everything else is dropped AND logged. Drops feed the instructor ops
+# dashboard event stream via docker/firewall/audit_drops.sh.
+#
+# Apply with: `sudo nft -f docker/firewall/rules.nft` then verify with
+# `sudo nft list ruleset`. The rules survive reboot via nftables-persistent.
+
+flush ruleset
+
+table inet wize73 {
+    set wize73_subnet {
+        type ipv4_addr
+        flags interval
+        elements = { 172.28.0.0/24 }
+    }
+
+    set guapo_tailscale {
+        type ipv4_addr
+        elements = { 100.91.130.128 }
+    }
+
+    set wize73_internal_targets {
+        type ipv4_addr
+        flags interval
+        elements = {
+            172.28.0.0/24,    # bridge subnet (sidecar + agent-proxy)
+            127.0.0.0/8,      # localhost loopback (DNS stub, cloudflared)
+        }
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+
+        # Only filter traffic ORIGINATING from the wize73 bridge subnet.
+        # Other docker networks and host traffic pass unaffected.
+        ip saddr @wize73_subnet jump wize73_egress
+    }
+
+    chain wize73_egress {
+        # Allow established/related (responses to allowed connections).
+        ct state established,related accept
+
+        # Allow traffic to guapo over Tailscale on port 8000.
+        ip daddr @guapo_tailscale tcp dport 8000 accept
+
+        # Allow traffic to the internal docker bridge (sidecar + agent-proxy).
+        ip daddr @wize73_internal_targets accept
+
+        # Drop everything else with logging. The "wize73-drop" prefix is
+        # what audit_drops.sh greps for.
+        log prefix "wize73-drop: " level warn
+        drop
+    }
+}

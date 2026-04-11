@@ -1,0 +1,154 @@
+# Reference docker compose for slim.
+#
+# This file lives in the repo as a REFERENCE — the actual compose file
+# on slim is at /etc/docker/compose/wize73/docker-compose.yml and is
+# user-owned. The reference exists so the team can review and reproduce
+# the deployment shape.
+#
+# All three services run on the internal `wize73-net` bridge network.
+# The app container exposes :8080 to 127.0.0.1 ONLY (cloudflared on the
+# host reaches it via localhost). The agent-proxy exposes its own port
+# to 127.0.0.1 ONLY for cloudflared's path-based ingress. The sidecar
+# is reachable only from inside the bridge network and never from the
+# host.
+#
+# Hardening: read-only rootfs, cap_drop ALL, no privileged, no docker
+# socket, non-root, resource caps. The app container has zero host
+# mounts. The sidecar has read-only /proc, /sys, /etc/os-release.
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Main chatbot app — what students see at https://class.wize73.com
+  # ─────────────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: ../../        # repo root
+      dockerfile: docker/app/Dockerfile
+    image: ghcr.io/wize73-ai/slim/app:${IMAGE_TAG:-latest}
+    container_name: wize73-app
+    restart: unless-stopped
+    init: true
+    networks:
+      - wize73-net
+    ports:
+      - "127.0.0.1:8080:8080"   # localhost only — cloudflared reaches in
+    environment:
+      # Guapo's Tailscale address (slim → guapo over the tunnel).
+      OPENAI_BASE_URL: "http://100.91.130.128:8000/v1"
+      OPENAI_API_KEY: "sk-local"
+      CHAT_MODEL: "/models/phi-4-mini"
+      # Sidecar lives at the compose service name on the bridge.
+      SLIM_SIDECAR_URL: "http://stats-sidecar:8080/stats"
+      # Ops dashboard auth — set per-environment, NOT in this file.
+      OPS_BEARER_TOKEN: "${OPS_BEARER_TOKEN}"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      stats-sidecar:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Host stats sidecar — read-only /proc /sys /etc/os-release
+  # ─────────────────────────────────────────────────────────────────────
+  stats-sidecar:
+    build:
+      context: ../sidecar
+      dockerfile: Dockerfile
+    image: ghcr.io/wize73-ai/slim/sidecar:${IMAGE_TAG:-latest}
+    container_name: wize73-sidecar
+    restart: unless-stopped
+    init: true
+    networks:
+      - wize73-net
+    # NO ports section — internal network only
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+    environment:
+      HOST_PROC: "/host/proc"
+      HOST_SYS: "/host/sys"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Agent inference proxy — CI's only path to guapo
+  # ─────────────────────────────────────────────────────────────────────
+  agent-proxy:
+    build:
+      context: ../agent-proxy
+      dockerfile: Dockerfile
+    image: ghcr.io/wize73-ai/slim/agent-proxy:${IMAGE_TAG:-latest}
+    container_name: wize73-agent-proxy
+    restart: unless-stopped
+    init: true
+    networks:
+      - wize73-net
+    ports:
+      - "127.0.0.1:8081:8080"   # localhost only — cloudflared path-based ingress
+    environment:
+      GUAPO_URL: "http://100.91.130.128:8000"
+      AGENT_PROXY_TOKEN: "${AGENT_PROXY_TOKEN}"
+      AGENT_PROXY_PER_PR_LIMIT: "10"
+      AGENT_PROXY_GLOBAL_LIMIT: "30"
+      AGENT_PROXY_CACHE_TTL: "300"
+      AGENT_PROXY_PAUSED: "${AGENT_PROXY_PAUSED:-0}"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    pids_limit: 128
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+networks:
+  wize73-net:
+    driver: bridge
+    name: wize73-net
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
