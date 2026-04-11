@@ -1,0 +1,137 @@
+name: deploy on main
+
+# Triggered ONLY by push to main (post-merge). This is the only workflow
+# that has access to deploy secrets (Tailscale OAuth, GHCR token, deploy
+# SSH if needed) — and it never executes student code at workflow time.
+# It pulls a pre-built image from GHCR and hands off to a fixed deploy.sh
+# on slim which the user owns and CI can't change.
+#
+# Flow:
+#   1. Build the app image on the GH runner.
+#   2. Tag with commit SHA + 'latest'.
+#   3. Push to GHCR (ghcr.io/wize73-ai/slim/app).
+#   4. Bring up Tailscale on the runner via tailscale/github-action.
+#   5. SSH to slim using Tailscale SSH (no separate key — tailnet identity).
+#   6. Run /opt/wize73/deploy.sh <sha> on slim. That script does the
+#      blue/green swap with /healthz gate and auto-rollback within 30s.
+#   7. Mark deploy success/failure based on deploy.sh exit code.
+#
+# The blue/green swap and the rollback logic live ON slim, not in this
+# workflow, so a malicious PR that somehow modified this file (it's
+# CODEOWNERS-locked) couldn't bypass the deploy gate.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write   # to push to GHCR
+
+# Don't run multiple deploys at once if commits land in quick succession.
+concurrency:
+  group: deploy-on-main
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: build + push to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      sha_short: ${{ steps.meta.outputs.sha_short }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          SHA_SHORT="${GITHUB_SHA::12}"
+          echo "sha_short=$SHA_SHORT" >> "$GITHUB_OUTPUT"
+          REGISTRY="ghcr.io/${{ github.repository }}/app"
+          echo "tags=$REGISTRY:$SHA_SHORT,$REGISTRY:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  deploy-to-slim:
+    name: deploy to slim
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+      url: https://class.wize73.com
+    steps:
+      - name: Bring up Tailscale on the runner
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          # The OAuth client must be authorized for this tag in your
+          # Tailscale ACL. Tag is referenced by the Tailscale SSH ACL
+          # rule that allows it to ssh to slim as the deploy user.
+          tags: tag:gh-deploy
+          version: latest
+
+      - name: Wait for Tailscale to be ready
+        run: |
+          sudo tailscale status
+          ping -c 2 slim || ping -c 2 100.74.33.35
+
+      - name: Run deploy.sh on slim via Tailscale SSH
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.sha_short }}
+        run: |
+          set -euo pipefail
+          # Tailscale SSH authenticates by tailnet identity — no SSH key
+          # in repo secrets. The deploy script lives on slim and is
+          # CI-immutable.
+          ssh -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=10 \
+              james@slim \
+              "/opt/wize73/deploy.sh '$IMAGE_TAG'"
+
+      - name: Verify public URL
+        run: |
+          # The tunnel should serve the new app within seconds of the swap.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" https://class.wize73.com/healthz || echo "000")
+            if [[ "$status" == "200" ]]; then
+              echo "✓ class.wize73.com responding 200"
+              exit 0
+            fi
+            echo "  attempt $i: status=$status, retrying..."
+            sleep 3
+          done
+          echo "::error::class.wize73.com not responding 200 after 30s"
+          exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          # Post a critical event to the ops dashboard so the instructor
+          # sees it on the live feed during class.
+          # Disabled in v1 until OPS_INGEST_TOKEN is configured.
+          echo "::warning::deploy failed — would post to /ops/events here"
+          echo "TODO: curl POST to /ops/events with severity=critical"
