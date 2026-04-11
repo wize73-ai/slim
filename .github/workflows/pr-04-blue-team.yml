@@ -1,0 +1,166 @@
+name: pr-04 blue-team
+
+# Agent 4: defensive code review. Static checks for missing error
+# handling on guapo calls + (TODO) LLM residual review of the diff via
+# the slim agent proxy.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  blue-team:
+    name: blue-team
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: AST scan for unwrapped guapo calls in app/
+        run: |
+          python3 - <<'PY'
+          import ast
+          import sys
+          from pathlib import Path
+
+          DANGER = {"stream_completion", "build_request", "make_client"}
+          unwrapped: list[str] = []
+
+          class Visitor(ast.NodeVisitor):
+              def __init__(self, path: str) -> None:
+                  self.path = path
+                  self.try_depth = 0
+
+              def visit_Try(self, node: ast.Try) -> None:
+                  self.try_depth += 1
+                  self.generic_visit(node)
+                  self.try_depth -= 1
+
+              def visit_Call(self, node: ast.Call) -> None:
+                  name = None
+                  if isinstance(node.func, ast.Name):
+                      name = node.func.id
+                  elif isinstance(node.func, ast.Attribute):
+                      name = node.func.attr
+                  if name in DANGER and self.try_depth == 0:
+                      unwrapped.append(f"{self.path}:{node.lineno}: {name}()")
+                  self.generic_visit(node)
+
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError as e:
+                  print(f"::error file={py},line={e.lineno}::syntax error: {e.msg}")
+                  sys.exit(1)
+              Visitor(str(py)).visit(tree)
+
+          if unwrapped:
+              print(f"::error::{len(unwrapped)} guapo-facing calls not wrapped in try/except")
+              for u in unwrapped:
+                  print(f"  - {u}")
+              print()
+              print("Wrap these calls with at minimum:")
+              print("    try:")
+              print("        ... call here ...")
+              print("    except UpstreamUnavailable:")
+              print("        ... user-friendly error ...")
+              print("    except UpstreamTimeout:")
+              print("        ... user-friendly error ...")
+              print("    except ChatError:")
+              print("        ... user-friendly error ...")
+              sys.exit(1)
+          else:
+              print("✓ all guapo-facing calls in app/ are inside try/except blocks")
+          PY
+
+      - name: AST scan for missing input validation on user-facing routes
+        run: |
+          python3 - <<'PY'
+          # Heuristic: any FastAPI route handler with Form() or Query()
+          # parameters should call .strip() or len() check on user input
+          # before using it. Imperfect but catches the common bug.
+          import ast
+          import sys
+          from pathlib import Path
+
+          warnings: list[str] = []
+
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError:
+                  continue
+              src = py.read_text()
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      # Look for @app.post or @app.get above this function.
+                      decorators = [
+                          ast.unparse(d) if hasattr(ast, "unparse") else ""
+                          for d in node.decorator_list
+                      ]
+                      if not any("post" in d.lower() or "get" in d.lower() for d in decorators):
+                          continue
+                      # Does the body contain a strip() or len() call?
+                      body_src = ast.unparse(node) if hasattr(ast, "unparse") else ""
+                      if "Form" in body_src and ".strip(" not in body_src and "len(" not in body_src:
+                          warnings.append(f"{py}:{node.lineno}: {node.name} accepts Form input without strip/len validation")
+
+          if warnings:
+              for w in warnings:
+                  print(f"::warning::{w}")
+              # Warnings only — not failing the gate. Agent will tighten
+              # this once we have more data on student patterns.
+          else:
+              print("✓ all FastAPI form handlers in app/ have visible input validation")
+          PY
+
+      - name: LLM blue-team residual review
+        if: success()
+        env:
+          AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN }}
+        run: |
+          if [[ -z "${AGENT_PROXY_TOKEN:-}" ]]; then
+            echo "::notice::skipping blue-team LLM review (no proxy token)"
+            exit 0
+          fi
+          echo "TODO: invoke blue_team_prompt against the diff via slim proxy"
+
+      - name: Comment on PR
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ blue-team failed
+
+            Defensive review found gaps. The most common issue is calls
+            to `stream_completion()`, `build_request()`, or `make_client()`
+            in `app/` that aren't wrapped in try/except for the structured
+            chat exceptions.
+
+            Wrap your guapo-facing calls:
+
+            ```python
+            try:
+                async for chunk in stream_completion(messages, instrument=t):
+                    ...
+            except UpstreamUnavailable:
+                # user-friendly error
+            except UpstreamTimeout:
+                # user-friendly error
+            except ChatError:
+                # generic fallback
+            ```
+
+            Run `./scripts/explain-failure.sh blue-team` for details.

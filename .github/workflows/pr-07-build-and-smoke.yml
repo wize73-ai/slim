@@ -1,0 +1,84 @@
+name: pr-07 build-and-smoke
+
+# Agent 7: build the app container, run the smoke test against it.
+# This is the gate that locks the metrics tab — smoke_test.py asserts
+# the locked tab markers are present in /metrics/, so a PR that nukes
+# the locked template fails here.
+#
+# NO secrets in this job — it executes student code.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  build-and-smoke:
+    name: build-and-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build app image
+        run: |
+          docker build \
+            -f docker/app/Dockerfile \
+            -t wize73-app:smoke \
+            --cache-from=type=gha \
+            --cache-to=type=gha,mode=max \
+            .
+
+      - name: Set up Python (for smoke_test.py)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run smoke test
+        run: |
+          python3 docker/smoke_test.py \
+            --image wize73-app:smoke \
+            --name pr-smoke \
+            --port 18080
+
+      - name: Comment on PR
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ build-and-smoke failed
+
+            Either the docker build failed (syntax error in your code,
+            broken import, missing file in the COPY) or the smoke test
+            failed (the container starts but `/metrics/` is missing the
+            locked template markers).
+
+            **Most common cause:** a PR that modified a file under
+            `core/observability/templates/` and broke the marker that
+            the smoke test asserts on. The locked template is the
+            measurement integrity boundary — if you broke it, you need
+            to revert that change.
+
+            Run locally to reproduce:
+
+            ```
+            ./scripts/preflight.sh --full
+            ```
+
+            or directly:
+
+            ```
+            docker build -f docker/app/Dockerfile -t wize73-app:local .
+            python3 docker/smoke_test.py --image wize73-app:local
+            ```
+
+            Run `./scripts/explain-failure.sh build-and-smoke` for details.

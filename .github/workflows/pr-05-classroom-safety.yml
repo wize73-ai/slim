@@ -1,0 +1,89 @@
+name: pr-05 classroom-safety
+
+# Agent 5: content review of new persona / system prompt / few-shot
+# files. Different from secrets-scan — looks for inappropriate content,
+# not technical leaks. Configurable via core/agents/prompts/classroom_safety_rules.yaml.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  classroom-safety:
+    name: classroom-safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Regex word-list scan on prompt content
+        run: |
+          set -euo pipefail
+          # The wordlist is intentionally small — agent 5 has a richer
+          # rules file plus an LLM secondary review. This is the static
+          # gate that catches the most obvious problems before the LLM
+          # even runs.
+          wordlist='\b(fuck|shit|bitch|asshole|cunt|nigger|faggot|kill yourself|kys)\b'
+
+          hits=$(grep -RinE "$wordlist" \
+              --include='*.md' --include='*.yaml' --include='*.yml' --include='*.html' \
+              app/personas app/system_prompts app/examples app/templates 2>/dev/null || true)
+
+          if [[ -n "$hits" ]]; then
+              echo "::error::profanity or harmful language found in app/ prompt content:"
+              echo "$hits"
+              exit 1
+          fi
+          echo "✓ no profanity in app/ prompt content"
+
+      - name: Check for impersonation of named real people
+        run: |
+          set -euo pipefail
+          # Custom rule from classroom_safety_rules.yaml: personas may not
+          # impersonate real teachers or students by name. We can't know
+          # all real names, but we can flag anything that looks like
+          # "I am <Name> the <role>" patterns where role is teacher/student/etc.
+          impersonation_pattern='I am [A-Z][a-z]+ the (teacher|student|principal|counselor|coach)'
+          hits=$(grep -RinE "$impersonation_pattern" \
+              --include='*.md' --include='*.yaml' --include='*.yml' \
+              app/personas 2>/dev/null || true)
+          if [[ -n "$hits" ]]; then
+              echo "::error::potential impersonation of a named real person:"
+              echo "$hits"
+              exit 1
+          fi
+          echo "✓ no obvious impersonation patterns"
+
+      - name: LLM classroom-safety review
+        if: success()
+        env:
+          AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN }}
+        run: |
+          if [[ -z "${AGENT_PROXY_TOKEN:-}" ]]; then
+            echo "::notice::skipping classroom-safety LLM review (no proxy token)"
+            exit 0
+          fi
+          echo "TODO: invoke classroom_safety_content_review against new prompt files"
+
+      - name: Comment on PR
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ classroom-safety failed
+
+            Content in your persona/system_prompt/example files violates
+            the classroom safety rules in `core/agents/prompts/classroom_safety_rules.yaml`.
+
+            The most common issues are profanity in persona text or
+            personas that impersonate real teachers/students by name.
+
+            Run `./scripts/explain-failure.sh classroom-safety` for details
+            on what's allowed.

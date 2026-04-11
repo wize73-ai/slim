@@ -1,0 +1,136 @@
+name: pr-02 code-quality
+
+# Agent 2: ruff strict + ruff format + mypy strict on core/ + pytest +
+# interrogate docstring coverage. Auto-fixes are committed back to the
+# PR branch as a `style: auto-fix lint` commit so students don't have to
+# fix every formatting nit by hand.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write   # to push the auto-fix commit
+  pull-requests: write
+  checks: write
+
+jobs:
+  code-quality:
+    name: code-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pinned deps + dev tools
+        run: |
+          pip install --quiet -r requirements.txt -r requirements-dev.txt
+
+      - name: ruff format auto-fix
+        id: ruff_format
+        run: |
+          ruff format .
+          if ! git diff --quiet; then
+            echo "format_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ruff check auto-fix
+        id: ruff_check
+        run: |
+          ruff check --fix .
+          if ! git diff --quiet; then
+            echo "check_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit auto-fixes back to the branch
+        if: steps.ruff_format.outputs.format_changed == 'true' || steps.ruff_check.outputs.check_changed == 'true'
+        run: |
+          git config user.name "wize73-bot"
+          git config user.email "bot@wize73.local"
+          git add -A
+          git commit -m "style: auto-fix lint via ruff format + ruff check --fix"
+          git push
+
+      - name: ruff check (strict, no fixes — must be clean)
+        run: |
+          ruff check . || (
+            echo "::error::ruff check failed even after auto-fix — these need manual attention"
+            exit 1
+          )
+
+      - name: ruff format check (must be clean)
+        run: |
+          ruff format --check . || (
+            echo "::error::ruff format would still change files after auto-fix"
+            exit 1
+          )
+
+      - name: mypy strict on core/
+        run: |
+          mypy core/ || (
+            echo "::error::mypy errors on core/ — type hints missing or wrong"
+            exit 1
+          )
+
+      - name: pytest
+        run: |
+          pytest -q --tb=line --no-header --color=no || (
+            echo "::error::pytest failures"
+            exit 1
+          )
+
+      - name: interrogate (docstring coverage ≥80% on core/)
+        run: |
+          interrogate --fail-under=80 -q core/ || (
+            echo "::error::docstring coverage below 80% on core/"
+            exit 1
+          )
+
+      - name: LLM pythonic review
+        if: success()
+        env:
+          AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN }}
+        run: |
+          if [[ -z "${AGENT_PROXY_TOKEN:-}" ]]; then
+            echo "::notice::skipping LLM pythonic review (no proxy token)"
+            exit 0
+          fi
+          echo "TODO: invoke pythonic_review prompt against the diff via slim proxy"
+
+      - name: Comment on PR
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ code-quality failed
+
+            One of: `ruff check`, `ruff format`, `mypy`, `pytest`, or
+            `interrogate` failed. See the workflow logs.
+
+            Auto-fixable issues should already have been committed to your
+            branch as `style: auto-fix lint`. If you still see failures
+            after pulling, they're things ruff couldn't fix automatically.
+
+            Quick fixes you can run locally:
+
+            ```
+            ruff format .
+            ruff check --fix .
+            mypy core/
+            pytest
+            ```
+
+            Run `./scripts/explain-failure.sh code-quality` for details.

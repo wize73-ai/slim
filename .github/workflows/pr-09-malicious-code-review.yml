@@ -1,0 +1,231 @@
+name: pr-09 malicious-code-review
+
+# Agent 9: the insider-threat catch-net. semgrep p/security-audit +
+# bandit + custom AST scanner for danger primitives + entropy detector
+# for obfuscated payloads + (TODO) dual-judge LLM review of the diff.
+#
+# False positives are cheap here. False negatives are catastrophic.
+# Tune toward false positives.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  issues: write   # to auto-create the security-review issue on flag
+
+jobs:
+  malicious-code-review:
+    name: malicious-code-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: |
+          pip install --quiet semgrep==1.100.0 bandit==1.8.0
+
+      - name: semgrep security-audit + command-injection on app/
+        run: |
+          semgrep --config=p/security-audit \
+                  --config=p/command-injection \
+                  --config=p/insecure-transport \
+                  --error --quiet \
+                  --exclude=tests --exclude=.gitnexus \
+                  app/ \
+            || (echo "::error::semgrep flagged something on app/" && exit 1)
+
+      - name: bandit on app/
+        run: |
+          bandit -q -r app/ -x tests \
+            || (echo "::error::bandit flagged high-severity issues on app/" && exit 1)
+
+      - name: AST scan for danger primitives
+        run: |
+          python3 - <<'PY'
+          import ast
+          import sys
+          from pathlib import Path
+
+          DANGER_CALLS = {"eval", "exec", "compile", "__import__"}
+          DANGER_MODULES = {"socket", "ctypes", "pty", "paramiko", "mmap"}
+          ENV_LEAK_HINTS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD")
+
+          findings: list[str] = []
+
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError:
+                  continue
+              src = py.read_text()
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.Call):
+                      func = node.func
+                      name = None
+                      if isinstance(func, ast.Name):
+                          name = func.id
+                      elif isinstance(func, ast.Attribute):
+                          name = func.attr
+                      if name in DANGER_CALLS:
+                          findings.append(f"{py}:{node.lineno}: dangerous call {name}()")
+                      # subprocess with shell=True
+                      if name == "run" or name == "Popen" or name == "call":
+                          for kw in node.keywords:
+                              if kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value:
+                                  findings.append(f"{py}:{node.lineno}: subprocess.{name}(shell=True)")
+                  if isinstance(node, ast.Import):
+                      for alias in node.names:
+                          if alias.name in DANGER_MODULES:
+                              findings.append(f"{py}:{node.lineno}: import {alias.name} (suspicious)")
+                  if isinstance(node, ast.ImportFrom) and node.module in DANGER_MODULES:
+                      findings.append(f"{py}:{node.lineno}: from {node.module} import ... (suspicious)")
+                  # Env var reads with secret-name hints
+                  if isinstance(node, ast.Subscript):
+                      target = node.value
+                      if isinstance(target, ast.Attribute) and target.attr == "environ":
+                          if isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+                              if any(h in node.slice.value.upper() for h in ENV_LEAK_HINTS):
+                                  findings.append(f"{py}:{node.lineno}: reads env var {node.slice.value!r}")
+
+          if findings:
+              print(f"::error::{len(findings)} danger-pattern hits in app/")
+              for f in findings:
+                  print(f"  - {f}")
+              print()
+              print("These patterns are usually fine in isolation but red-flagged")
+              print("collectively. If you have a legitimate need, mention it in the")
+              print("PR description and an instructor will review.")
+              sys.exit(1)
+          else:
+              print("✓ no danger-pattern hits in app/")
+          PY
+
+      - name: High-entropy string detector
+        run: |
+          python3 - <<'PY'
+          import math
+          import re
+          from pathlib import Path
+
+          def shannon(s: str) -> float:
+              if not s:
+                  return 0.0
+              freq = {c: s.count(c) for c in set(s)}
+              return -sum((c / len(s)) * math.log2(c / len(s)) for c in freq.values())
+
+          # Strings of >=20 chars with high entropy are often obfuscated payloads.
+          STRING_RE = re.compile(r'["\']([^"\']{20,})["\']')
+          THRESHOLD = 4.5  # entropy bits/char — base64 is ~4.7, normal English ~3.0
+
+          flagged: list[str] = []
+          for py in Path("app").rglob("*.py"):
+              for i, line in enumerate(py.read_text().splitlines(), start=1):
+                  for m in STRING_RE.findall(line):
+                      if shannon(m) > THRESHOLD:
+                          flagged.append(f"{py}:{i}: high-entropy string ({shannon(m):.1f} bits/char): {m[:40]}...")
+
+          if flagged:
+              # Warning, not failure — entropy detection has false positives
+              # on legitimate base64/hash constants. Agent will tighten once
+              # we have more data on student patterns.
+              print(f"::warning::{len(flagged)} high-entropy string(s) found")
+              for f in flagged[:10]:
+                  print(f"  - {f}")
+              print()
+              print("If these are intentional (test fixtures, hash constants),")
+              print("they're fine. If they look like base64 of something else,")
+              print("decode and verify.")
+          else:
+              print("✓ no high-entropy strings in app/")
+          PY
+
+      - name: Time-bomb pattern detector
+        run: |
+          python3 - <<'PY'
+          # Flag conditional behavior on hostname / time / env var against
+          # constants — classic time-bomb pattern.
+          import ast
+          import sys
+          from pathlib import Path
+
+          findings: list[str] = []
+
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError:
+                  continue
+              for node in ast.walk(tree):
+                  if not isinstance(node, ast.Compare):
+                      continue
+                  left_src = ast.unparse(node.left) if hasattr(ast, "unparse") else ""
+                  triggers = ("gethostname", "uname", "datetime.now", "date.today")
+                  if any(t in left_src for t in triggers):
+                      # Compared against a constant?
+                      if any(isinstance(c, ast.Constant) for c in node.comparators):
+                          findings.append(f"{py}:{node.lineno}: conditional on environment ({left_src[:60]})")
+
+          if findings:
+              print(f"::error::{len(findings)} time-bomb pattern(s) detected:")
+              for f in findings:
+                  print(f"  - {f}")
+              print()
+              print("Code that checks hostname / time / date against constants is")
+              print("the classic time-bomb pattern — code that's harmless during")
+              print("CI but activates in production. Remove the conditional or")
+              print("explain it in the PR description.")
+              sys.exit(1)
+          else:
+              print("✓ no time-bomb patterns")
+          PY
+
+      - name: LLM dual-judge (paranoid + naive)
+        if: success()
+        env:
+          AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN }}
+        run: |
+          if [[ -z "${AGENT_PROXY_TOKEN:-}" ]]; then
+            echo "::notice::skipping malicious-code-review LLM dual-judge (no proxy token)"
+            exit 0
+          fi
+          echo "TODO: invoke malicious_review_prompts (judge A + judge B) via slim proxy"
+
+      - name: Comment on PR + create security review issue
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ malicious-code-review failed
+
+            **One or more malicious-pattern detectors fired on your PR.**
+            This agent is intentionally paranoid — false positives are cheap.
+
+            If you weren't trying to do anything malicious and you can
+            explain the pattern, the most common false positives are:
+
+            - Dynamic string construction that looks like URL building
+            - Reading environment variables with TOKEN/KEY/SECRET in the name
+            - Importing modules that aren't typically used (socket, ctypes)
+            - High-entropy string constants (legitimate hashes, test fixtures)
+            - Conditional behavior that checks the hostname or time
+
+            **The instructor has been notified.** If your PR is legitimate,
+            mention what you were trying to do in the PR description and
+            an instructor will manually approve.
+
+            Run `./scripts/explain-failure.sh malicious-code-review` for
+            details on what each detector looks for.

@@ -1,0 +1,157 @@
+name: pr-06 version-discipline
+
+# Agent 6: hygiene checks. Pinned dependencies, locked paths untouched,
+# conventional commit messages, branch up to date with main, PR has a
+# linked issue. NO LLM — pure shell + python.
+#
+# This is the "mini curriculum on professional hygiene" agent. Failures
+# come with educational explanations from
+# core/agents/prompts/discipline_explanations.yaml.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  version-discipline:
+    name: version-discipline
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: requirements.txt is fully pinned
+        run: |
+          set -euo pipefail
+          if [[ ! -f requirements.txt ]]; then
+              echo "✓ no requirements.txt to check"
+              exit 0
+          fi
+          # Lines starting with a letter that don't have ==X are unpinned.
+          bad=$(grep -nE '^[a-zA-Z]' requirements.txt \
+              | grep -vE '==[0-9]' \
+              | grep -vE '^[0-9]+:#' || true)
+          if [[ -n "$bad" ]]; then
+              echo "::error::requirements.txt has unpinned dependencies:"
+              echo "$bad"
+              echo
+              echo "WHY THIS MATTERS: unpinned versions mean your build becomes"
+              echo "non-reproducible. Two people running the same commit get"
+              echo "different dependency trees. In production, 'works on my"
+              echo "machine' bugs come from exactly this. Pin to an exact"
+              echo "version (e.g. requests==2.32.3)."
+              exit 1
+          fi
+          echo "✓ requirements.txt fully pinned"
+
+      - name: requirements-dev.txt is fully pinned
+        run: |
+          set -euo pipefail
+          if [[ ! -f requirements-dev.txt ]]; then
+              exit 0
+          fi
+          bad=$(grep -nE '^[a-zA-Z]' requirements-dev.txt \
+              | grep -vE '==[0-9]' \
+              | grep -vE '^[0-9]+:#' || true)
+          if [[ -n "$bad" ]]; then
+              echo "::error::requirements-dev.txt has unpinned dependencies:"
+              echo "$bad"
+              exit 1
+          fi
+          echo "✓ requirements-dev.txt fully pinned"
+
+      - name: Locked paths only changed with code-owner intent
+        run: |
+          set -euo pipefail
+          # Files under core/, .github/, docker/, docs/wiki/ are CODEOWNERS-
+          # protected. We can't enforce CODEOWNERS in this job (that's
+          # branch protection's job), but we can WARN clearly so students
+          # know they need an instructor approval.
+          locked=$(git diff origin/main --name-only -- \
+              'core/' '.github/' 'docker/' 'docs/wiki/' 2>/dev/null || true)
+          if [[ -n "$locked" ]]; then
+              echo "::warning::this PR edits CODEOWNERS-locked paths:"
+              echo "$locked" | sed 's/^/  /'
+              echo
+              echo "These changes need an instructor code-owner review to merge."
+              echo "If this was intentional, that's fine — branch protection"
+              echo "will require the approval. If it was accidental, revert"
+              echo "the locked-path changes and only edit under app/ or scripts/."
+          else
+              echo "✓ no edits to CODEOWNERS-locked paths"
+          fi
+
+      - name: All commits use conventional format
+        run: |
+          set -euo pipefail
+          # Check every commit in this PR (since the merge base with main).
+          merge_base=$(git merge-base origin/main HEAD)
+          commits=$(git log --pretty=%s "$merge_base..HEAD")
+          bad=""
+          while IFS= read -r subject; do
+              [[ -z "$subject" ]] && continue
+              if ! echo "$subject" | grep -qE '^(feat|fix|docs|refactor|test|chore|style|perf|build|ci|revert)(\(.+\))?: .+'; then
+                  bad="$bad$subject\n"
+              fi
+          done <<< "$commits"
+          if [[ -n "$bad" ]]; then
+              echo "::error::non-conventional commit subjects in this PR:"
+              printf "$bad" | sed 's/^/  - /'
+              echo
+              echo "WHY THIS MATTERS: conventional commits become your release"
+              echo "notes and your git log's table of contents. In six months"
+              echo "your future self will grep your history. Give them"
+              echo "something to find."
+              echo
+              echo "Valid prefixes: feat:, fix:, docs:, refactor:, test:,"
+              echo "chore:, style:, perf:, build:, ci:, revert:"
+              exit 1
+          fi
+          echo "✓ all commits use conventional format"
+
+      - name: Branch is up to date with main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if [[ -n "$(git log HEAD..origin/main --oneline)" ]]; then
+              echo "::warning::your branch is behind origin/main"
+              echo "Run: git fetch origin && git rebase origin/main"
+              # Warn only — don't fail. Stale branches can still merge if
+              # GitHub auto-merges them, but the warning helps students
+              # see they should rebase before pushing.
+          else
+              echo "✓ branch is up to date with main"
+          fi
+
+      - name: PR description is non-empty
+        if: github.event.pull_request.body == null || github.event.pull_request.body == ''
+        run: |
+          echo "::error::PR description is empty"
+          echo
+          echo "Even a one-paragraph 'this changes X to fix Y' helps reviewers"
+          echo "(and the agents) understand intent. The PR template prompts"
+          echo "you for the right fields — fill them in."
+          exit 1
+
+      - name: Comment on PR
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ version-discipline failed
+
+            One of: pinned-deps, conventional-commits, or PR-description
+            checks failed. See the workflow logs for the educational
+            explanation of WHY each rule matters.
+
+            Run `./scripts/explain-failure.sh version-discipline` for the
+            full reference.

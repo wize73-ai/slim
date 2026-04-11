@@ -1,0 +1,202 @@
+name: pr-08 slop-and-scope
+
+# Agent 8: AST-based slop detection (dead code, premature abstraction,
+# duplication) plus an LLM scope-vs-intent check that compares the diff
+# to the linked issue. NO GitNexus — pure stdlib AST per project decision.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  slop-and-scope:
+    name: slop-and-scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: AST scan for dead code in app/
+        run: |
+          python3 - <<'PY'
+          import ast
+          import sys
+          from pathlib import Path
+
+          defined: dict[str, str] = {}
+          referenced: set[str] = set()
+
+          # Function/class definitions in app/
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError as e:
+                  print(f"::error file={py},line={e.lineno}::syntax error: {e.msg}")
+                  sys.exit(1)
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                      if not node.name.startswith("_"):
+                          defined.setdefault(node.name, f"{py}:{node.lineno}")
+
+          # References across the WHOLE project (app/ + core/ + tests/)
+          for py in list(Path("app").rglob("*.py")) + list(Path("core").rglob("*.py")) + list(Path("tests").rglob("*.py")):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError:
+                  continue
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.Name):
+                      referenced.add(node.id)
+                  elif isinstance(node, ast.Attribute):
+                      referenced.add(node.attr)
+                  elif isinstance(node, (ast.ImportFrom, ast.Import)):
+                      for alias in node.names:
+                          referenced.add(alias.name.split(".")[-1])
+
+          # Things that are intentionally exposed (FastAPI route handlers,
+          # __main__ entry points, etc.) and shouldn't be flagged.
+          ignored = {"home", "chat", "healthz", "main", "lifespan"}
+          dead = {n: loc for n, loc in defined.items()
+                  if n not in referenced and n not in ignored}
+
+          if dead:
+              # Tier dead code as warning (not failure) for the first iteration —
+              # the false positive rate on FastAPI handlers is high.
+              print(f"::warning::{len(dead)} public symbols in app/ have no in-project references")
+              for name, loc in list(dead.items())[:20]:
+                  print(f"  - {loc}: {name}()")
+              print()
+              print("These may be FastAPI route handlers (auto-discovered) — verify")
+              print("before removing. If they're genuinely unused, delete them.")
+          else:
+              print("✓ no obviously-dead public symbols in app/")
+          PY
+
+      - name: AST scan for premature abstraction
+        run: |
+          python3 - <<'PY'
+          # Look for class hierarchies in app/ where the abstract base or
+          # protocol has only one concrete implementation. Common AI slop.
+          import ast
+          import sys
+          from pathlib import Path
+
+          base_classes: dict[str, str] = {}  # class name -> file:line
+          subclasses: dict[str, list[str]] = {}  # base name -> list of subclasses
+
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError:
+                  continue
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.ClassDef):
+                      base_classes[node.name] = f"{py}:{node.lineno}"
+                      for base in node.bases:
+                          if isinstance(base, ast.Name):
+                              subclasses.setdefault(base.id, []).append(node.name)
+
+          # A "premature" base class has zero or one subclasses AND is
+          # named like an abstract (Base*, Abstract*, *Interface, *Protocol).
+          smell_patterns = ("Base", "Abstract", "Interface", "Protocol")
+          flagged = []
+          for name, loc in base_classes.items():
+              if not any(name.startswith(p) or name.endswith(p) for p in smell_patterns):
+                  continue
+              count = len(subclasses.get(name, []))
+              if count <= 1:
+                  flagged.append(f"{loc}: {name} has {count} subclass(es)")
+
+          if flagged:
+              print(f"::warning::{len(flagged)} likely premature abstraction(s):")
+              for f in flagged:
+                  print(f"  - {f}")
+          else:
+              print("✓ no obvious premature abstractions")
+          PY
+
+      - name: AST scan for hallucinated imports
+        run: |
+          python3 - <<'PY'
+          # Check that every `from X import Y` in app/ resolves to a real
+          # module. ruff F401 catches unused imports; this catches
+          # nonexistent imports.
+          import ast
+          import importlib.util
+          import sys
+          from pathlib import Path
+
+          hallucinated: list[str] = []
+
+          for py in Path("app").rglob("*.py"):
+              try:
+                  tree = ast.parse(py.read_text())
+              except SyntaxError:
+                  continue
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.ImportFrom) and node.module:
+                      # Skip relative imports — they need a full package context.
+                      if node.level > 0:
+                          continue
+                      try:
+                          spec = importlib.util.find_spec(node.module)
+                          if spec is None:
+                              hallucinated.append(f"{py}:{node.lineno}: from {node.module} import ...")
+                      except (ImportError, ModuleNotFoundError, ValueError):
+                          hallucinated.append(f"{py}:{node.lineno}: from {node.module} import ...")
+
+          if hallucinated:
+              print(f"::error::{len(hallucinated)} import(s) cannot be resolved:")
+              for h in hallucinated:
+                  print(f"  - {h}")
+              print()
+              print("These imports point at modules that don't exist. AI assistants")
+              print("sometimes hallucinate import paths — verify the module is real")
+              print("and pinned in requirements.txt.")
+              sys.exit(1)
+          else:
+              print("✓ all imports resolve to real modules")
+          PY
+
+      - name: LLM scope-vs-intent review
+        if: success()
+        env:
+          AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN }}
+        run: |
+          if [[ -z "${AGENT_PROXY_TOKEN:-}" ]]; then
+            echo "::notice::skipping scope-vs-intent LLM review (no proxy token)"
+            exit 0
+          fi
+          echo "TODO: invoke slop_scope_prompt with linked issue + diff"
+
+      - name: Comment on PR
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ✗ slop-and-scope failed
+
+            Hallucinated imports were found in your code, or another AST
+            check fired. AI assistants sometimes import modules that
+            don't exist — verify each `from X import Y` resolves to a
+            real module and is pinned in `requirements.txt`.
+
+            Dead code and premature abstraction are warnings only in the
+            first iteration of this agent (high false-positive rate on
+            FastAPI handlers).
+
+            Run `./scripts/explain-failure.sh slop-and-scope` for details.
