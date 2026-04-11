@@ -1,0 +1,73 @@
+{
+  "name": "wize73-class-chatbot",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "tamasfe.even-better-toml",
+        "wholroyd.jinja",
+        "redhat.vscode-yaml",
+        "eamodio.gitlens",
+        "github.vscode-pull-request-github"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.terminal.activateEnvironment": false,
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+          },
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "ruff.organizeImports": true,
+        "ruff.fixAll": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/.pytest_cache": true,
+          "**/.mypy_cache": true,
+          "**/.ruff_cache": true,
+          "**/.gitnexus": true,
+          "**/AGENTS.md": true,
+          "**/CLAUDE.md": true
+        }
+      }
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "OPENAI_BASE_URL": "http://127.0.0.1:9999/v1",
+    "OPENAI_API_KEY": "sk-dev-mock",
+    "CHAT_MODEL": "/models/phi-4-mini",
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONPATH": "/workspaces/${localWorkspaceFolderBasename}"
+  },
+  "forwardPorts": [8080, 9999],
+  "portsAttributes": {
+    "8080": {
+      "label": "wize73 chatbot app",
+      "onAutoForward": "notify"
+    },
+    "9999": {
+      "label": "mock guapo (dev only)",
+      "onAutoForward": "silent"
+    }
+  }
+}
