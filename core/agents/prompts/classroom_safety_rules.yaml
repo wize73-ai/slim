@@ -1,0 +1,54 @@
+# Classroom safety configuration for agent 5.
+#
+# Tunable strictness rules used by the classroom-safety agent when
+# reviewing the *content* of new persona / system prompt / few-shot
+# example files. Different from the secrets-scan agent which looks at
+# code for technical leaks; this one looks at natural-language content
+# for what students might author into a chatbot for class.
+#
+# CODEOWNERS-protected. Instructors edit this before each class run to
+# tune strictness; students cannot.
+#
+# Schema:
+#   strictness: "low" | "medium" | "high"  - global preset
+#   disallow:    list of categories that fail the gate
+#   flag_for_review: list of categories that warn but don't fail
+#   custom_rules: list of plain-language prohibitions specific to this class
+#   override_emails: list of emails who can override a flag via PR comment
+
+strictness: high
+
+disallow:
+  - profanity
+  - sexual_content
+  - graphic_violence
+  - illegal_activity_advice
+  - self_harm_content
+  - personally_identifiable_information
+  - hate_speech
+  - explicit_drug_use
+  - weapons_instructions
+
+flag_for_review:
+  - politics
+  - religion
+  - mental_health_topics
+  - mature_themes
+  - alcohol_references
+  - dark_humor
+
+allowed_with_caveats:
+  - mild_irony
+  - cultural_references
+  - hypothetical_scenarios
+
+custom_rules:
+  - "Personas may not impersonate real teachers, students, or staff by name"
+  - "No content referencing the school by name or by recognizable description"
+  - "No content that could be mistaken for actual mental health, medical, legal, or financial advice"
+  - "No content that asks the user to share personal or contact information"
+  - "No content that encourages bypassing school policies or systems"
+  - "No content that disparages a specific student, group, or demographic"
+
+override_emails:
+  - jawarm24@gmail.com

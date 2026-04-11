@@ -1,0 +1,61 @@
+# Educational explanations for agent 6 (version-discipline) hygiene
+# violations. Each rejection comes paired with a "why this matters"
+# message so students learn the reasoning, not just the rule.
+#
+# Format: rule_id -> explanation paragraph. Keep under 320 characters.
+
+unpinned_dependency: |
+  Unpinned versions mean your build becomes non-reproducible: two people
+  running the same commit get different dependency trees. In production,
+  'works on my machine' bugs come from exactly this. Pin to an exact
+  version (e.g. requests==2.32.3) so the build is deterministic.
+
+missing_lockfile_entry: |
+  A new dependency was added to requirements.txt but the lockfile wasn't
+  regenerated. Without a hash-pinned lockfile, supply-chain attacks via
+  malicious package updates remain possible. Run `uv pip compile` to
+  regenerate the lockfile and commit it alongside the requirements change.
+
+locked_path_modified: |
+  This PR modified a CODEOWNERS-locked path under core/ or .github/.
+  Those paths hold the security boundary, the agents, and the deploy
+  workflow — they can only be changed with instructor review. If you
+  genuinely need a change here, open an issue tagged needs-instructor.
+
+non_conventional_commit: |
+  Conventional commits (feat:, fix:, docs:, refactor:, test:, chore:)
+  become your release notes and your git log's table of contents. In
+  six months your future self will grep your history. Give them
+  something to find. See https://www.conventionalcommits.org/
+
+empty_commit_message: |
+  An empty or one-word commit message ('fix', 'wip', 'update') is
+  technically valid but useless to anyone reading the history later.
+  Spend ten seconds describing WHAT changed and WHY.
+
+branch_not_up_to_date: |
+  Your branch is behind main. Rebase or merge from main before opening
+  the PR so the agents are checking against the current state of the
+  codebase, not an outdated baseline. `git fetch origin && git rebase
+  origin/main` is usually all you need.
+
+missing_pr_description: |
+  PR description is empty. Even a one-paragraph 'this changes X to fix
+  Y' helps reviewers (and the agents) understand intent. The PR
+  template prompts you for the right fields — fill them in.
+
+missing_linked_issue: |
+  This PR isn't linked to an issue. Linking lets agent 8 (slop-and-scope)
+  compare your diff against the stated scope, and lets the team see what
+  you were trying to solve. Add 'Closes #N' or 'Refs #N' in the PR body.
+
+ai_assistant_field_blank: |
+  The PR template asks which AI assistant you used and what you asked
+  it. This isn't a gotcha — instructors use it to spot patterns across
+  the class. Filling it in honestly is part of the learning, not part
+  of the grade.
+
+force_push_after_review: |
+  Force-pushing after a reviewer (or agent) has commented overwrites
+  history and makes their feedback hard to follow. Use a follow-up
+  commit instead. Force-push is fine before any review has happened.

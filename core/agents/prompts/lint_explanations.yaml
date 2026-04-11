@@ -1,0 +1,113 @@
+# Educational explanations for ruff lint codes.
+#
+# Used by agent 2 (code-quality) to convert dry rule numbers into
+# "why this matters" messages on PR comments. Students see real
+# learning material instead of cryptic codes.
+#
+# Format: ruff code -> single explanation paragraph. Keep entries
+# under 280 characters so they fit cleanly in PR comments.
+
+D100: |
+  Missing module-level docstring. Every public Python module should
+  start with a one-line summary explaining what it does, so a new
+  reader can grep your codebase and find this file by purpose
+  instead of by name.
+
+D101: |
+  Missing class docstring. Class names tell you WHAT, docstrings
+  tell you WHY this class exists and what invariants it enforces.
+
+D103: |
+  Missing function docstring. Public functions need a one-line
+  summary describing the contract — inputs, outputs, side effects.
+  Your future self in six months will thank you.
+
+ANN001: |
+  Missing type annotation on a function argument. Type hints are
+  documentation that compilers read — they prevent the most common
+  Python bug ('I thought it was a string but it was a list') and
+  enable IDE autocomplete for the next person reading your code.
+
+ANN201: |
+  Missing return type annotation on a public function. Knowing what
+  a function returns is half of knowing what it does. Add -> X to
+  the signature.
+
+F401: |
+  Unused import. AI assistants love to add imports speculatively
+  ('just in case'). Each unused import is a tiny lie about your
+  module's dependencies. Remove it. ruff --fix will do this for you.
+
+F841: |
+  Local variable assigned but never used. Often a sign of dead code
+  left over from a refactor or an AI suggestion that didn't pan out.
+  If you meant to use it, use it. If not, remove it.
+
+UP008: |
+  Use Python 3 super() without arguments. The Python 2 form
+  super(MyClass, self) is obsolete and noisier than super().
+
+SIM102: |
+  Two nested if statements that could be combined with 'and'. Less
+  nesting = easier to scan. AI tools often produce nested if-trees
+  that lint can simplify.
+
+SIM108: |
+  Use a ternary instead of if/else for a one-line value assignment.
+  More compact, more idiomatic. Don't overuse ternaries for complex
+  logic, but for 'x = a if cond else b' it's the right choice.
+
+B008: |
+  Function call in default argument. Mutable defaults are a famous
+  Python footgun — the default object is created ONCE at function
+  definition, not per call. Use None as default and create the
+  mutable inside the function.
+
+B904: |
+  raise without 'from' inside an except block. Always preserve the
+  original exception with 'raise NewError(...) from e' so debuggers
+  see the full chain. AI-generated except-and-raise often loses this.
+
+C901: |
+  Function is too complex (cyclomatic complexity over 10). Too many
+  branches for one function — split it. The split point is usually
+  obvious once you see the warning.
+
+E501: |
+  Line too long. We're at 100 chars; if you're past, restructure.
+  Long lines usually mean a function call with too many positional
+  arguments — name them with kwargs and let your IDE format.
+
+TRY003: |
+  Avoid specifying long messages outside the exception class. Define
+  a custom exception subclass with the message embedded if you need
+  more than a one-liner.
+
+TRY300: |
+  Consider moving this statement to an else block. The pattern
+  'try / except / use_result' is clearer when 'use_result' is in
+  the else clause — it makes explicit that the use only happens
+  when no exception was raised.
+
+PERF401: |
+  Use a list comprehension instead of a for loop with append.
+  List comprehensions are faster, more idiomatic, and easier to
+  read once you're used to them.
+
+RET504: |
+  Unnecessary assignment before return. 'x = expr; return x'
+  becomes 'return expr'. The intermediate variable usually doesn't
+  earn its keep.
+
+PLR0913: |
+  Too many function arguments. If you need more than ~7 args, you
+  probably need a dataclass holding them. Long argument lists make
+  call sites hard to read and easy to mis-order.
+
+N802: |
+  Function name should be snake_case. PEP 8 names matter because
+  they let any Python developer scan your code without thinking
+  about which language style this project uses.
+
+N803: |
+  Argument name should be snake_case. Same reason as N802.
