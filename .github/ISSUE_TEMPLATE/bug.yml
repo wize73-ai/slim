@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a bug in the chatbot or its infrastructure
+title: "fix: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, check the [Troubleshooting wiki](https://github.com/wize73-ai/slim/wiki/06-Troubleshooting)
+        — most common issues are documented there with fixes.
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: One paragraph describing the bug. Be specific.
+      placeholder: "When I send a chat message containing only whitespace, the app returns 500 instead of a friendly error."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: One sentence on the desired behavior.
+      placeholder: "A 400 with a polite 'please type something first' message."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Numbered list. The agent that runs your fix needs this to verify.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "low — cosmetic / paper cut"
+        - "medium — feature broken but workaround exists"
+        - "high — feature broken with no workaround"
+        - "critical — chatbot is down or insecure"
+    validations:
+      required: true
+
+  - type: input
+    id: which_pr
+    attributes:
+      label: Which PR introduced this (if known)
+      description: |
+        If you know which merge broke things, the rollback path is much
+        faster. Find it in `git log --oneline main` or via `gh pr list`.
+      placeholder: "#42"
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Where you saw this — Codespace, deployed app, both?
+      placeholder: "Deployed at https://class.wize73.com — sha-abc123 from this morning"

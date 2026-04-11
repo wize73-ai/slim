@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Wiki — Your First PR
+    url: https://github.com/wize73-ai/slim/wiki/04-Your-First-PR
+    about: Walkthrough of a tiny additive PR end-to-end. Read this first.
+  - name: Wiki — Feature Backlog
+    url: https://github.com/wize73-ai/slim/wiki/07-Feature-Backlog
+    about: Pre-curated starter issues at graduated difficulty.
+  - name: Wiki — Agents Reference
+    url: https://github.com/wize73-ai/slim/wiki/05-Agents-Reference
+    about: What each of the 9 PR agents checks and how to fix failures.
+  - name: Wiki — Troubleshooting
+    url: https://github.com/wize73-ai/slim/wiki/06-Troubleshooting
+    about: Symptom-driven help for common problems.

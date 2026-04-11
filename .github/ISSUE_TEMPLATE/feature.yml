@@ -1,0 +1,72 @@
+name: Feature request
+description: Propose a new feature for the chatbot
+title: "feat: "
+labels: ["feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for new features that don't already have a
+        starter issue. If you're picking from the [Feature Backlog](https://github.com/wize73-ai/slim/wiki/07-Feature-Backlog),
+        you don't need to open a new issue — just reference the backlog
+        item in your PR.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: One paragraph describing the feature.
+      placeholder: "Add a temperature slider to the chat UI so users can adjust the model's randomness per turn."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: |
+        What does this teach? Every feature in this project is a
+        learning opportunity — what specifically does this one make
+        students think about?
+      placeholder: "Teaches the relationship between temperature and the projection calculator's predictability assumption."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Estimated difficulty
+      description: How big is this in terms of one-sitting PR scope?
+      options:
+        - "★ easy (file edit only, ~15 min)"
+        - "★★ medium (small Python change, ~30-60 min)"
+        - "★★★ hard (multiple files, ~1-2 hours)"
+        - "★★★★ stretch (touches edge cases, discuss with instructor first)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: metric_impact
+    attributes:
+      label: What metric does this affect?
+      description: |
+        Which chart on the metrics tab will move when this lands?
+        Token flow? Processing time? Network bytes? Asymmetry scatter?
+      placeholder: "Affects the prefill-vs-decode time chart by changing how the model spends its compute budget."
+
+  - type: input
+    id: files
+    attributes:
+      label: Files you expect to touch
+      description: Comma-separated list. Helps agent 8 (slop-and-scope) verify scope.
+      placeholder: "app/templates/chat.html, app/main.py"
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I checked the [Feature Backlog](https://github.com/wize73-ai/slim/wiki/07-Feature-Backlog) and this isn't already there
+          required: true
+        - label: I read the [Bidirectional Framing](https://github.com/wize73-ai/slim/wiki/03-Bidirectional-Framing) and can articulate which metric this affects
+          required: true

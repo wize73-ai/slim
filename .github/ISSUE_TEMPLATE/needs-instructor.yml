@@ -1,0 +1,69 @@
+name: Needs instructor
+description: Something that requires instructor approval (new dep, locked-path edit, etc.)
+title: "needs-instructor: "
+labels: ["needs-instructor"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when you need to ask the instructor for
+        permission to do something the agents would otherwise block:
+
+        - Add a new Python dependency (the manifest is locked)
+        - Edit a file under `core/`, `docker/`, `.github/`, or `docs/wiki/`
+        - Override a classroom safety flag
+        - Override a malicious-code-review flag (false positive)
+        - Anything else that requires CODEOWNERS approval
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of approval do you need
+      options:
+        - "Add a new Python dependency"
+        - "Edit a CODEOWNERS-locked path"
+        - "Override a classroom-safety flag"
+        - "Override a malicious-code-review flag (false positive)"
+        - "Add a new tunnel ingress rule on slim"
+        - "Other (explain below)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you want to do
+      description: One paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why you need this
+      description: |
+        What feature does this unblock? What did you try without it?
+        Be specific — instructors are looking for evidence that you
+        thought about it before asking.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope of the change
+      description: |
+        What files would change, what tests would need to be added or
+        updated, what new attack surface would this open (if any).
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: I read [Architecture](https://github.com/wize73-ai/slim/wiki/01-Architecture) and understand which paths are locked and why
+          required: true
+        - label: I tried to solve this without an instructor approval first
+          required: true
