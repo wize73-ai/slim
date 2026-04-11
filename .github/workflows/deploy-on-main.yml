@@ -82,8 +82,29 @@ jobs:
     environment:
       name: production
       url: https://class.wize73.com
+    env:
+      # Surface the secret existence into a regular env var so the
+      # `if:` expressions on subsequent steps can check it. (GH Actions
+      # doesn't let `if:` reference secrets directly for security.)
+      HAS_TAILSCALE_OAUTH: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID != '' && 'true' || 'false' }}
     steps:
+      - name: Preflight — check deploy is configured
+        id: preflight
+        run: |
+          if [[ "${HAS_TAILSCALE_OAUTH}" != "true" ]]; then
+            echo "::warning title=deploy skipped::Tailscale OAuth secrets not configured."
+            echo "::warning::Set TAILSCALE_OAUTH_CLIENT_ID and TAILSCALE_OAUTH_SECRET via"
+            echo "::warning::    bash .github/configure-repo.sh --secrets-only"
+            echo "::warning::Until then, the build-and-push job still runs and the latest"
+            echo "::warning::image is in GHCR — the deploy step just no-ops."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "✓ Tailscale OAuth secrets present, proceeding with deploy"
+
       - name: Bring up Tailscale on the runner
+        if: steps.preflight.outputs.skip != 'true'
         uses: tailscale/github-action@v3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
@@ -95,11 +116,13 @@ jobs:
           version: latest
 
       - name: Wait for Tailscale to be ready
+        if: steps.preflight.outputs.skip != 'true'
         run: |
           sudo tailscale status
           ping -c 2 slim || ping -c 2 100.74.33.35
 
       - name: Run deploy.sh on slim via Tailscale SSH
+        if: steps.preflight.outputs.skip != 'true'
         env:
           IMAGE_TAG: ${{ needs.build-and-push.outputs.sha_short }}
         run: |
@@ -113,6 +136,7 @@ jobs:
               "/opt/wize73/deploy.sh '$IMAGE_TAG'"
 
       - name: Verify public URL
+        if: steps.preflight.outputs.skip != 'true'
         run: |
           # The tunnel should serve the new app within seconds of the swap.
           for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -128,7 +152,7 @@ jobs:
           exit 1
 
       - name: Notify on failure
-        if: failure()
+        if: failure() && steps.preflight.outputs.skip != 'true'
         run: |
           # Post a critical event to the ops dashboard so the instructor
           # sees it on the live feed during class.
