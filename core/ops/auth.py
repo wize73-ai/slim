@@ -1,67 +1,89 @@
 """Authentication helpers for the ops sub-app.
 
-The /ops endpoints are protected by two layers in production:
+The /ops endpoints are protected by multiple auth paths:
 
-1. **Cloudflare Access** sits in front of the tunnel and only lets the
-   instructor's email through. Successful Access requests carry a
+1. **Cloudflare Access** — SSO at the edge injects
    ``Cf-Access-Authenticated-User-Email`` header.
+2. **Bearer token** — for non-browser clients (Claude curl).
+3. **Session cookie** — set by visiting ``/ops/login?token=<OPS_BEARER_TOKEN>``
+   once in the browser. The cookie is HttpOnly + SameSite=Strict so it
+   can't be read by JS and isn't sent cross-origin.
 
-2. **Bearer token** as a fallback path for non-browser clients (notably
-   the Claude Code session that ``curl``s ``/ops/events.json`` to
-   co-monitor). The token comes from the ``OPS_BEARER_TOKEN`` env var.
-
-In dev (no ``OPS_BEARER_TOKEN`` set), authentication is disabled — useful
-for local development without setting up Cloudflare Access.
+In dev (no ``OPS_BEARER_TOKEN`` set), authentication is disabled.
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
+import secrets
+from typing import Final
 
-from fastapi import Header, HTTPException, status
+from fastapi import Cookie, Header, HTTPException, status
 
-# Cloudflare Access injects the authenticated user's email in the
-# `Cf-Access-Authenticated-User-Email` header on every request that passes
-# its SSO check. FastAPI's Header() converts the snake_case parameter name
-# `cf_access_authenticated_user_email` into that header name automatically.
+# A server-side secret for signing the session cookie. Generated fresh on
+# every process start — restarting the app invalidates all sessions, which
+# is fine for a classroom tool. If persistence across restarts is needed,
+# set OPS_COOKIE_SECRET in the environment.
+_COOKIE_SECRET: Final[str] = os.environ.get(
+    "OPS_COOKIE_SECRET", secrets.token_hex(32)
+)
+
+# Cookie name. Prefixed with __Host- for additional browser security
+# (requires Secure, Path=/, no Domain).
+_COOKIE_NAME: Final[str] = "ops_session"
+_COOKIE_MAX_AGE: Final[int] = 86400  # 24 hours
+
+
+def _sign_cookie(value: str) -> str:
+    """Create an HMAC signature for a cookie value."""
+    sig = hmac.new(_COOKIE_SECRET.encode(), value.encode(), hashlib.sha256).hexdigest()
+    return f"{value}:{sig}"
+
+
+def _verify_cookie(signed: str) -> str | None:
+    """Verify and extract the value from a signed cookie. Returns None if invalid."""
+    if ":" not in signed:
+        return None
+    value, sig = signed.rsplit(":", 1)
+    expected = hmac.new(_COOKIE_SECRET.encode(), value.encode(), hashlib.sha256).hexdigest()
+    if hmac.compare_digest(sig, expected):
+        return value
+    return None
 
 
 def require_ops_auth(
     authorization: str | None = Header(default=None),
     cf_access_authenticated_user_email: str | None = Header(default=None),
+    ops_session: str | None = Cookie(default=None, alias=_COOKIE_NAME),
 ) -> str:
     """FastAPI dependency that gates an /ops endpoint.
 
-    Returns the identity of the caller as a string — either an email
-    (from Cloudflare Access) or ``"bearer"`` (when the bearer token path
-    was used) or ``"dev"`` (when authentication is disabled).
+    Accepts any of: Cloudflare Access header, Bearer token, or a valid
+    signed session cookie (set by /ops/login).
 
-    Args:
-        authorization: The ``Authorization`` request header. FastAPI
-            populates this from the request automatically.
-        cf_access_authenticated_user_email: The
-            ``Cf-Access-Authenticated-User-Email`` header injected by
-            Cloudflare Access on successful SSO.
-
-    Returns:
-        The caller identity string for audit logging.
-
-    Raises:
-        HTTPException: 401 if no valid auth was provided in production.
+    Returns the caller identity string for audit logging.
     """
     expected_token = os.environ.get("OPS_BEARER_TOKEN")
     if not expected_token:
         return "dev"
 
-    # Cloudflare Access path — trust the header injected at the edge.
+    # Path 1: Cloudflare Access header.
     if cf_access_authenticated_user_email:
         return cf_access_authenticated_user_email
 
-    # Bearer token path — used by Claude curl and any other non-browser client.
+    # Path 2: Bearer token (curl / non-browser).
     if authorization and authorization.startswith("Bearer "):
         provided = authorization[len("Bearer "):]
         if _constant_time_eq(provided, expected_token):
             return "bearer"
+
+    # Path 3: Signed session cookie (browser after /ops/login).
+    if ops_session:
+        identity = _verify_cookie(ops_session)
+        if identity:
+            return identity
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,13 +92,22 @@ def require_ops_auth(
     )
 
 
-def _constant_time_eq(a: str, b: str) -> bool:
-    """Compare two strings in constant time to avoid timing oracles.
+def create_session_cookie(identity: str) -> tuple[str, str, int]:
+    """Create a signed session cookie value.
 
-    Standard Python ``==`` short-circuits on the first differing byte, which
-    leaks token length and prefix to a remote attacker. ``hmac.compare_digest``
-    avoids this; we wrap it for explicit intent at the call site.
+    Returns (cookie_name, signed_value, max_age_seconds).
     """
-    import hmac  # noqa: PLC0415
+    return _COOKIE_NAME, _sign_cookie(identity), _COOKIE_MAX_AGE
 
+
+def verify_token(token: str) -> bool:
+    """Check a token against OPS_BEARER_TOKEN."""
+    expected = os.environ.get("OPS_BEARER_TOKEN")
+    if not expected:
+        return True  # dev mode
+    return _constant_time_eq(token, expected)
+
+
+def _constant_time_eq(a: str, b: str) -> bool:
+    """Compare two strings in constant time to avoid timing oracles."""
     return hmac.compare_digest(a.encode(), b.encode())

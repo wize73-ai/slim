@@ -32,7 +32,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from core.ops.auth import require_ops_auth
+from core.ops.auth import create_session_cookie, require_ops_auth, verify_token
 from core.ops.events import (
     DEFAULT_EVENT_CAPACITY,
     Event,
@@ -109,6 +109,38 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
     templates = Jinja2Templates(directory=_TEMPLATE_DIRS)
 
     ops_app = FastAPI(title="ops", docs_url=None, redoc_url=None)
+
+    # ─── browser login (sets a session cookie) ────────────────────────────
+
+    @ops_app.get("/login")
+    async def ops_login(token: str = "") -> Any:
+        """Browser login: visit /ops/login?token=<OPS_BEARER_TOKEN> once.
+
+        Sets an HttpOnly signed session cookie so subsequent /ops/*
+        requests are authenticated without needing the token in the URL
+        again. Redirect to /ops/ after login.
+        """
+        if not verify_token(token):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid token",
+            )
+        cookie_name, cookie_value, max_age = create_session_cookie("instructor")
+        from starlette.responses import RedirectResponse  # noqa: PLC0415
+
+        response = RedirectResponse(url="/ops/", status_code=302)
+        response.set_cookie(
+            key=cookie_name,
+            value=cookie_value,
+            max_age=max_age,
+            httponly=True,
+            samesite="strict",
+            secure=False,  # class.wize73.com is HTTPS via Cloudflare, but
+            # the app sees HTTP from cloudflared. Set True if you add
+            # TLS termination inside the container.
+            path="/ops",
+        )
+        return response
 
     # ─── HTML dashboard ───────────────────────────────────────────────────
 
