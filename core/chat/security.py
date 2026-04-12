@@ -104,13 +104,17 @@ _REDACT_PATTERNS: Final[tuple[str, ...]] = (
     # Tailscale and LAN IPs
     r"100\.91\.130\.128",
     r"192\.168\.1\.103",
-    # Hostname (case-insensitive, word-bounded so 'guacamole' isn't matched)
-    r"(?i)\bguapo\b",
+    # Hostname (word-bounded so 'guacamole' isn't matched; case-insensitive
+    # matching is handled by the re.IGNORECASE flag on the compiled regex)
+    r"\bguapo\b",
 )
 
-# Compile a single alternation regex from all patterns. We use ``re.subn``
-# below so we can count how many redactions happened in each pass.
-_REDACT_RE: Final[re.Pattern[str]] = re.compile("|".join(_REDACT_PATTERNS))
+# Compile a single alternation regex from all patterns. re.IGNORECASE so
+# case variants like "Guapo", "PHI-4-MINI", etc. are also caught. We use
+# ``re.subn`` below so we can count how many redactions happened per pass.
+_REDACT_RE: Final[re.Pattern[str]] = re.compile(
+    "|".join(_REDACT_PATTERNS), re.IGNORECASE
+)
 
 # How many characters to keep buffered for boundary-spanning matches. Set
 # to the longest pattern length plus a margin. The longest pattern is the
