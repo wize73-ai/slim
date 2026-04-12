@@ -138,7 +138,9 @@
 <body>
 <nav class="top">
   <span class="brand">class.wize73.com</span>
-  <a href="/" class="{% if active == 'chat' %}active{% endif %}">Chat</a>
+  <a href="/" class="{% if active == 'home' %}active{% endif %}">Home</a>
+  <a href="/chat" class="{% if active == 'chat' %}active{% endif %}">Chat</a>
+  <a href="/guide" class="{% if active == 'guide' %}active{% endif %}">AI Guide</a>
   <a href="/metrics" class="{% if active == 'metrics' %}active{% endif %}">Metrics</a>
   <a href="/ops" class="{% if active == 'ops' %}active{% endif %}">Ops</a>
 </nav>

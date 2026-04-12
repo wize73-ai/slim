@@ -52,7 +52,7 @@ from core.observability import (
     create_metrics_app,
 )
 from core.ops import OpsState, create_ops_app
-from core.prompts import load_baseline
+from core.prompts import load_baseline, load_mentor
 from core.timing import instrument
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -85,6 +85,10 @@ ops_state = OpsState()
 # Baseline system prompt is loaded from core/prompts/baseline.md (locked).
 BASELINE_PROMPT = load_baseline()
 
+# Mentor system prompt is loaded from core/prompts/mentor.md (locked).
+# Used by the /guide/chat endpoint — teaches without doing.
+MENTOR_PROMPT = load_mentor()
+
 # ────────────────────────────────────────────────────────────────────────────
 # Templates — search app/templates/ first, then core/templates/ for base.html
 # ────────────────────────────────────────────────────────────────────────────
@@ -109,10 +113,30 @@ app.mount("/ops", create_ops_app(ops_state))
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request) -> HTMLResponse:
-    """Render the dumb v1 chat UI (student-editable)."""
+    """Render the styled landing page with exercise instructions."""
+    return templates.TemplateResponse(
+        request=request,
+        name="home.html",
+        context={},
+    )
+
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request) -> HTMLResponse:
+    """Render the chatbot UI (student-editable)."""
     return templates.TemplateResponse(
         request=request,
         name="chat.html",
+        context={},
+    )
+
+
+@app.get("/guide", response_class=HTMLResponse)
+async def guide_page(request: Request) -> HTMLResponse:
+    """Render the AI Guide with the mentor chatbot."""
+    return templates.TemplateResponse(
+        request=request,
+        name="guide.html",
         context={},
     )
 
@@ -215,6 +239,88 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
             '<strong>assistant:</strong><br>'
             f'<pre>{safe_output}</pre>'
             '</div>'
+        )
+    )
+
+
+@app.post("/guide/chat", response_class=HTMLResponse)
+async def mentor_chat(
+    request: Request, user_message: str = Form(...)  # noqa: ARG001
+) -> HTMLResponse:
+    """Mentor chatbot on the AI Guide tab. Same backend, teaching prompt.
+
+    Uses the locked mentor system prompt from core/prompts/mentor.md.
+    No student overlay, no persona — the mentor is fully locked so
+    students can't change it to "write my PR for me."
+    """
+    user_message = user_message.strip()
+    if not user_message:
+        return HTMLResponse(
+            content='<div class="mentor-response error">Type a question first.</div>',
+            status_code=400,
+        )
+
+    try:
+        with instrument() as t:
+            messages = build_request(
+                baseline=MENTOR_PROMPT,  # mentor prompt instead of baseline
+                user=user_message,
+            )
+            t.mark("t1")
+
+            output_parts: list[str] = []
+            async for chunk in stream_completion(messages, instrument=t):
+                output_parts.append(chunk)
+
+            output_text = "".join(output_parts)
+            output_tokens = count_tokens(output_text)
+
+            ring_buffer.submit_flow(
+                t.request_id,
+                TokenFlowSnapshot(
+                    system_tokens=messages.system_tokens,
+                    persona_tokens=messages.persona_tokens,
+                    examples_tokens=messages.examples_tokens,
+                    history_tokens=messages.history_tokens,
+                    user_tokens=messages.user_tokens,
+                    output_tokens=output_tokens,
+                ),
+            )
+    except UpstreamUnavailable:
+        return HTMLResponse(
+            content=(
+                '<div class="mentor-response error">'
+                "The inference service is unavailable. Try again in a moment."
+                "</div>"
+            ),
+            status_code=503,
+        )
+    except UpstreamTimeout:
+        return HTMLResponse(
+            content=(
+                '<div class="mentor-response error">'
+                "The inference service timed out. Try a shorter question."
+                "</div>"
+            ),
+            status_code=504,
+        )
+    except ChatError:
+        return HTMLResponse(
+            content=(
+                '<div class="mentor-response error">'
+                "Something went wrong. Try again."
+                "</div>"
+            ),
+            status_code=500,
+        )
+
+    safe_output = html.escape(output_text)
+    return HTMLResponse(
+        content=(
+            '<div class="mentor-response">'
+            "<strong>mentor:</strong><br>"
+            f"<pre>{safe_output}</pre>"
+            "</div>"
         )
     )
 

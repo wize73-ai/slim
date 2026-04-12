@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% set active = "guide" %}
+
+{% block title %}AI Guide · class.wize73.com{% endblock %}
+
+{% block extra_css %}
+  .guide-section { margin-bottom: 2rem; }
+  .guide-section h2 { font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--border); }
+  .principle { background: white; border-left: 4px solid var(--accent); padding: 0.75rem 1rem; margin: 0.75rem 0; border-radius: 0 4px 4px 0; }
+  .principle strong { color: var(--accent); }
+  .slop-table td { padding: 0.3rem 0.5rem; vertical-align: top; }
+  .slop-table td:first-child { white-space: nowrap; font-weight: 600; }
+  .loop-step { display: flex; align-items: flex-start; gap: 0.75rem; margin: 0.5rem 0; }
+  .loop-step .step-label { background: var(--accent); color: white; border-radius: 50%; min-width: 1.75rem; height: 1.75rem; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; }
+  .loop-step .step-text { font-size: 0.9rem; }
+  .loop-step .critical { color: var(--err); font-weight: 600; }
+  .mentor-box { background: white; border: 2px solid var(--accent); border-radius: 8px; padding: 1.25rem; margin-top: 2rem; }
+  .mentor-box h2 { margin-top: 0; color: var(--accent); }
+  .mentor-response { padding: 1rem; background: #f0f7ff; border: 1px solid #c0d8f0; border-radius: 4px; margin-top: 1rem; }
+  .mentor-response pre { background: transparent; border: none; padding: 0; white-space: pre-wrap; font-family: inherit; }
+  .mentor-response.error { background: #fef2f2; border-color: var(--err); color: var(--err); }
+  .htmx-indicator { opacity: 0; transition: opacity 0.2s; }
+  .htmx-request .htmx-indicator { opacity: 1; }
+{% endblock %}
+
+{% block content %}
+
+<h1>AI Guide</h1>
+<p class="subtle">
+  How to use AI assistants ethically for velocity coding, plus a mentor
+  chatbot that teaches without doing.
+</p>
+
+{# ── The velocity coding manifesto ───────────────────────────────────── #}
+<div class="guide-section">
+<h2>The velocity coding contract</h2>
+
+<div class="principle">
+  <strong>You are responsible for what you merge.</strong> Regardless of
+  who or what wrote the first draft. When an agent flags a problem, "the
+  AI wrote it" is not a defense — it's the diagnosis.
+</div>
+
+<div class="principle">
+  <strong>AI is the accelerator, not the author.</strong> The best
+  velocity-coding workflow is: think about what you need → have the AI
+  draft it → <em>read and understand every line</em> → adapt it to the
+  project → verify with preflight → commit. The "read and understand"
+  step is the one people skip and regret.
+</div>
+
+<div class="principle">
+  <strong>Attribution is mandatory, not shameful.</strong> The PR template
+  asks which AI tool you used and what you asked it. This isn't a gotcha.
+  Instructors use the data to spot patterns across the class. Students who
+  write "asked Claude to add a persona and copy-pasted the result" aren't
+  in trouble — they're getting the most useful kind of feedback.
+</div>
+
+<div class="principle">
+  <strong>The agents are your AI's editor.</strong> Nine automated agents
+  review every PR. They catch the slop patterns AI tools produce
+  (unused imports, hallucinated modules, premature abstractions, dead
+  code, missing error handling). Think of them as a code review from
+  someone who's seen every AI mistake before.
+</div>
+</div>
+
+{# ── The velocity loop ───────────────────────────────────────────────── #}
+<div class="guide-section">
+<h2>The velocity loop</h2>
+
+<div class="loop-step">
+  <div class="step-label">1</div>
+  <div class="step-text"><strong>Think</strong> — understand what you're building and why. Read the issue. Read the relevant wiki page. Know what metric should move when this ships.</div>
+</div>
+<div class="loop-step">
+  <div class="step-label">2</div>
+  <div class="step-text"><strong>Prompt</strong> — ask your AI assistant for a draft. Be specific: "write a Python function that loads a YAML persona file and returns the text" not "add personas to the chatbot."</div>
+</div>
+<div class="loop-step">
+  <div class="step-label" style="background: var(--err)">3</div>
+  <div class="step-text"><span class="critical">Read and understand every line.</span> This is the step that separates velocity coding from copy-paste. If you can't explain what a line does, don't commit it. Ask the <a href="#mentor">mentor below</a> if something is unclear.</div>
+</div>
+<div class="loop-step">
+  <div class="step-label">4</div>
+  <div class="step-text"><strong>Adapt</strong> — the AI doesn't know this project's conventions. Does it use <code>build_request()</code> with the labelled slots? Does it wrap guapo calls in try/except? Does it follow the ruff config? Adapt the draft to fit.</div>
+</div>
+<div class="loop-step">
+  <div class="step-label">5</div>
+  <div class="step-text"><strong>Preflight</strong> — <code>./scripts/preflight.sh</code> runs all 9 agents locally in ~15 seconds. Fix what it catches before pushing. This is the fastest feedback loop in the whole class.</div>
+</div>
+<div class="loop-step">
+  <div class="step-label">6</div>
+  <div class="step-text"><strong>Commit + push</strong> — conventional commit format. Open a PR. The 9 agents run for real. Iterate until green. Merge. Watch the metrics.</div>
+</div>
+</div>
+
+{# ── Common AI slop patterns ─────────────────────────────────────────── #}
+<div class="guide-section">
+<h2>AI slop to watch for</h2>
+<p class="subtle">
+  These are the patterns the agents catch most often in AI-generated code.
+  Learn to spot them yourself and you'll save time.
+</p>
+
+<table class="slop-table">
+  <tr><td>Unused imports</td><td>AI adds <code>import os, sys, json</code> speculatively. If you don't use it, delete it. ruff F401 catches this.</td></tr>
+  <tr><td>Hallucinated modules</td><td>AI invents <code>from fastapi.utils import magic_helper</code> that doesn't exist. The slop agent catches this via <code>importlib.util.find_spec</code>.</td></tr>
+  <tr><td>Dead helper functions</td><td>AI writes a utility function "for later" that nothing calls. If nothing calls it, delete it.</td></tr>
+  <tr><td>Premature abstraction</td><td>AI creates <code>BasePersonaLoader</code> with one subclass. You don't need a base class for one thing. Just write the one thing.</td></tr>
+  <tr><td>Broad exceptions</td><td><code>except Exception: pass</code> swallows everything including bugs you'd want to see. Catch specific exceptions. ruff TRY catches this.</td></tr>
+  <tr><td>Missing type hints</td><td>AI often omits return types and parameter types. mypy strict catches this on core/. Add them — they're documentation that compilers read.</td></tr>
+  <tr><td>Redundant comments</td><td><code># increment x</code> above <code>x += 1</code> is noise. Comments should explain WHY, not WHAT.</td></tr>
+  <tr><td>Scope creep</td><td>"Add a persona" turns into a 400-line refactor. Stick to the issue scope. If you find something else to fix, open a separate PR.</td></tr>
+</table>
+</div>
+
+{# ── When to ask for help vs. when to figure it out ──────────────────── #}
+<div class="guide-section">
+<h2>When to ask for help</h2>
+<p>
+  <strong>Ask the mentor below</strong> when you need to understand a
+  concept, decode an error, or review your approach before committing.
+</p>
+<p>
+  <strong>Ask your AI assistant</strong> when you need a code draft,
+  a boilerplate template, or a syntax reference.
+</p>
+<p>
+  <strong>Ask the instructor</strong> when an agent failure doesn't make
+  sense after you've tried the mentor and <code>./scripts/explain-failure.sh</code>,
+  or when you want to change something in the locked core.
+</p>
+</div>
+
+{# ── The mentor chatbot ──────────────────────────────────────────────── #}
+<div class="mentor-box" id="mentor">
+  <h2>Coding Mentor</h2>
+  <p class="subtle" style="margin-top: 0">
+    Same AI backend, different job. This mentor <strong>teaches concepts
+    without writing your code</strong>. Ask it about Python, FastAPI,
+    HTMX, the metrics tab, how the labelled slots work, why an agent
+    failed, or how to approach a feature. It'll explain and point you in
+    the right direction — then you write the code.
+  </p>
+
+  <form hx-post="/guide/chat"
+        hx-target="#mentor-response"
+        hx-swap="innerHTML"
+        hx-disabled-elt="textarea, button"
+        hx-indicator="#mentor-loading">
+    <label for="mentor-message"><strong>Ask the mentor:</strong></label>
+    <textarea id="mentor-message" name="user_message" rows="3"
+              placeholder="How do I add conversation history to build_request()?"
+              required></textarea>
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem;">
+      <button type="submit">Ask</button>
+      <span id="mentor-loading" class="htmx-indicator subtle">thinking...</span>
+    </div>
+  </form>
+
+  <div id="mentor-response">
+    <p class="subtle" style="margin-top: 1rem">Mentor responses appear here.</p>
+  </div>
+</div>
+
+{% endblock %}

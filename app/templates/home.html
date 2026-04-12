@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% set active = "home" %}
+
+{% block title %}class.wize73.com — AI Chatbot Teaching Project{% endblock %}
+
+{% block extra_css %}
+  .hero { text-align: center; padding: 2rem 0 1.5rem; }
+  .hero h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  .hero .tagline { font-size: 1.1rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .hero .cta { display: inline-block; background: var(--accent); color: white; padding: 0.75rem 2rem; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1.05rem; }
+  .hero .cta:hover { filter: brightness(0.9); }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 2rem 0; }
+  .step { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+  .step .num { display: inline-block; background: var(--accent); color: white; width: 2rem; height: 2rem; border-radius: 50%; text-align: center; line-height: 2rem; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .step h3 { margin: 0.25rem 0; font-size: 1rem; }
+  .step p { font-size: 0.875rem; color: var(--muted); margin: 0; }
+  .tabs-explain { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .tab-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+  .tab-card h3 { margin: 0 0 0.5rem; font-size: 1rem; }
+  .tab-card p { font-size: 0.85rem; color: var(--muted); margin: 0; }
+  .tab-card a { display: inline-block; margin-top: 0.75rem; font-size: 0.85rem; color: var(--accent); font-weight: 500; }
+  .section-head { font-size: 1.3rem; margin-top: 2.5rem; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border); }
+  .loop-visual { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.8rem; overflow-x: auto; line-height: 1.6; text-align: center; }
+  .backlog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+  .backlog-item { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem; font-size: 0.875rem; }
+  .backlog-item .diff { font-size: 0.75rem; margin-top: 0.25rem; }
+  @media (max-width: 720px) { .tabs-explain { grid-template-columns: 1fr; } }
+{% endblock %}
+
+{% block content %}
+
+{# ── Hero ────────────────────────────────────────────────────────────── #}
+<div class="hero">
+  <h1>class.wize73.com</h1>
+  <p class="tagline">
+    Build a chatbot. Measure what every decision costs.<br>
+    Ship it live in 90 seconds.
+  </p>
+  <a href="/chat" class="cta">Open the chatbot</a>
+</div>
+
+{# ── The exercise in 60 seconds ──────────────────────────────────────── #}
+<h2 class="section-head">The exercise in 60 seconds</h2>
+<p>
+  You inherit a deliberately bad chatbot and a fully working measurement
+  rig. Your job is to make the chatbot better — add personas, history,
+  voice, better prompts — while watching <strong>exactly what each
+  change costs</strong> in tokens, time, and compute on the
+  <a href="/metrics">Metrics</a> tab.
+</p>
+<p>
+  The point isn't the chatbot. The point is learning to <strong>feel</strong>
+  what a 200-token system prompt does to your context budget across a
+  20-turn session, and to <strong>measure</strong> it.
+</p>
+
+{# ── Five steps ──────────────────────────────────────────────────────── #}
+<div class="steps">
+  <div class="step">
+    <div class="num">1</div>
+    <h3>Open Codespaces</h3>
+    <p>Click <em>Code → Codespaces → Create</em> on the repo. Working dev
+    environment in 30 seconds. No local setup.</p>
+  </div>
+  <div class="step">
+    <div class="num">2</div>
+    <h3>Pick a feature</h3>
+    <p>Choose from the <a href="https://github.com/wize73-ai/slim/wiki/07-Feature-Backlog">Feature Backlog</a>.
+    Start with something tagged ★ easy.</p>
+  </div>
+  <div class="step">
+    <div class="num">3</div>
+    <h3>Branch + build</h3>
+    <p>Create a branch, make your change, run
+    <code>./scripts/preflight.sh</code> to catch issues before pushing.</p>
+  </div>
+  <div class="step">
+    <div class="num">4</div>
+    <h3>Open a PR</h3>
+    <p>Push and open a pull request. 9 automated agents review your code
+    in parallel (~90 seconds). Fix what they find.</p>
+  </div>
+  <div class="step">
+    <div class="num">5</div>
+    <h3>Merge → live</h3>
+    <p>When all agents are green, merge. Your change deploys to this site
+    in ~90 seconds. Watch the metrics move.</p>
+  </div>
+</div>
+
+{# ── The loop ────────────────────────────────────────────────────────── #}
+<h2 class="section-head">The loop</h2>
+<div class="loop-visual">
+branch → edit → <strong>preflight</strong> (~15s) → commit → push → PR<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;9 agents in parallel (~90s)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;all green → <strong>merge</strong> → deploy (~90s) → <strong>live at class.wize73.com</strong>
+</div>
+
+{# ── Three tabs ──────────────────────────────────────────────────────── #}
+<h2 class="section-head">Your three surfaces</h2>
+<div class="tabs-explain">
+  <div class="tab-card">
+    <h3>Chat</h3>
+    <p>The chatbot you're building. Currently dumb — single turn,
+    no memory, no persona. Make it better.</p>
+    <a href="/chat">Open Chat →</a>
+  </div>
+  <div class="tab-card">
+    <h3>AI Guide</h3>
+    <p>How to use AI assistants ethically for velocity coding, plus a
+    coding mentor you can ask for help.</p>
+    <a href="/guide">Open AI Guide →</a>
+  </div>
+  <div class="tab-card">
+    <h3>Metrics</h3>
+    <p>Live per-turn token flow, processing time, projections. This is
+    where you see what your changes cost.</p>
+    <a href="/metrics">Open Metrics →</a>
+  </div>
+</div>
+
+{# ── Getting started ─────────────────────────────────────────────────── #}
+<h2 class="section-head">Getting started</h2>
+<div class="card">
+  <p><strong>First time?</strong> Walk through
+  <a href="https://github.com/wize73-ai/slim/wiki/04-Your-First-PR">Your First PR</a>
+  — a step-by-step guide to opening a trivial PR that calibrates you to
+  the tools, the agents, and the deploy loop. Takes ~5 minutes.</p>
+
+  <p><strong>Three commands to remember:</strong></p>
+  <pre>./scripts/preflight.sh        # run all 9 agents locally before you push
+./scripts/explain-failure.sh  # decode any failing agent check
+rg &lt;name&gt;                     # fast search across the codebase</pre>
+
+  <p><strong>Need help?</strong> The <a href="/guide">AI Guide</a> tab
+  has a coding mentor that teaches concepts without writing your code
+  for you. Ask it about Python, FastAPI, HTMX, the metrics tab, or any
+  agent failure.</p>
+</div>
+
+{# ── What the metrics tab shows ──────────────────────────────────────── #}
+<h2 class="section-head">What the metrics tab shows you</h2>
+<p>
+  Every chat turn is decomposed into the <strong>labelled slots</strong>
+  that fed it: system prompt, persona, few-shot examples, conversation
+  history, and the user message. Each slot's token count is tracked
+  separately so you can see exactly where your tokens are going.
+</p>
+<p>
+  The key insight:
+  <strong>every metric has an in/out or pre/post axis, and the asymmetry
+  between the two halves is where the lessons live.</strong> Input tokens
+  vs output tokens. Prefill time vs decode time. Network bytes in vs out.
+  The <a href="https://github.com/wize73-ai/slim/wiki/03-Bidirectional-Framing">Bidirectional Framing</a>
+  wiki page explains this in depth.
+</p>
+
+{# ── Feature backlog highlights ──────────────────────────────────────── #}
+<h2 class="section-head">Starter features — pick one</h2>
+<p class="subtle">
+  Full list at the <a href="https://github.com/wize73-ai/slim/wiki/07-Feature-Backlog">Feature Backlog</a>.
+  Each is a single-PR exercise.
+</p>
+<div class="backlog-grid">
+  <div class="backlog-item">
+    <span class="badge ok">★ easy</span>
+    <strong>Add a persona</strong>
+    <div class="diff subtle">One YAML file under app/personas/. ~15 min.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge ok">★ easy</span>
+    <strong>Improve the chat UI</strong>
+    <div class="diff subtle">Edit app/templates/chat.html. Any styling goes. ~15 min.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge warn">★★</span>
+    <strong>Wire up persona loading</strong>
+    <div class="diff subtle">Make build_request() use app/personas/. ~30 min.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge warn">★★</span>
+    <strong>Add conversation history</strong>
+    <div class="diff subtle">Session state + history slot. Watch the trajectory chart ramp. ~45 min.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge warn">★★</span>
+    <strong>Add SSE streaming</strong>
+    <div class="diff subtle">Tokens appear as they arrive. TTFT chart gets data. ~45 min.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge err">★★★</span>
+    <strong>Add voice input</strong>
+    <div class="diff subtle">MediaRecorder → whisper STT → chat. ~1-2 hours.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge err">★★★</span>
+    <strong>Add voice output</strong>
+    <div class="diff subtle">XTTS-v2 TTS → audio playback. ~1-2 hours.</div>
+  </div>
+  <div class="backlog-item">
+    <span class="badge err">★★★</span>
+    <strong>Compare two prompts</strong>
+    <div class="diff subtle">Side-by-side cost comparison. The pedagogical power move. ~1-2 hours.</div>
+  </div>
+</div>
+
+{# ── The class arc ───────────────────────────────────────────────────── #}
+<h2 class="section-head">The 2.5-hour arc</h2>
+<table>
+  <tr><td><strong>0:00 – 0:20</strong></td><td>Orientation. Tour the site, demo the chat, demo the metrics tab, read one agent's prompt.</td></tr>
+  <tr><td><strong>0:20 – 0:35</strong></td><td>Everyone opens a trivial first PR. Watch the agents run. Read every comment. Calibrate.</td></tr>
+  <tr><td><strong>0:35 – 1:50</strong></td><td>Feature work. Pick from the backlog above. Open PRs, read agent feedback, iterate, merge, watch the deploy.</td></tr>
+  <tr><td><strong>1:50 – 2:15</strong></td><td>Red-team round. Try to break someone else's merged feature. Bugs become the next PR backlog.</td></tr>
+  <tr><td><strong>2:15 – 2:30</strong></td><td>Wrap. Look at the cumulative metrics together. Discuss which features cost more than they were worth.</td></tr>
+</table>
+
+<p class="subtle" style="margin-top: 2rem; text-align: center;">
+  Keep the <a href="/metrics">Metrics</a> tab open in a second browser tab
+  the entire time. When you merge, watch what moves. That's the whole point.
+</p>
+
+{% endblock %}
