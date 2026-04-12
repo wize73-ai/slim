@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% set active = "docs" %}
+
+{% block title %}Docs · class.wize73.com{% endblock %}
+
+{% block extra_css %}
+  .docs-layout { display: grid; grid-template-columns: 220px 1fr; gap: 2rem; }
+  .toc { position: sticky; top: 1rem; align-self: start; font-size: 0.85rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+  .toc a { display: block; padding: 0.2rem 0; color: var(--muted); text-decoration: none; border-left: 2px solid transparent; padding-left: 0.75rem; }
+  .toc a:hover { color: var(--fg); border-left-color: var(--accent); }
+  .toc .toc-h2 { font-weight: 600; margin-top: 0.5rem; color: var(--fg); }
+  .docs-body section { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+  .docs-body h2 { font-size: 1.3rem; border-bottom: 2px solid var(--border); padding-bottom: 0.4rem; margin-top: 2rem; }
+  .docs-body h3 { font-size: 1.05rem; margin-top: 1.5rem; }
+  .setup-step { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin: 0.75rem 0; }
+  .setup-step h4 { margin: 0 0 0.5rem; }
+  .agent-card { background: white; border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; padding: 1rem; margin: 0.75rem 0; }
+  .agent-card h4 { margin: 0 0 0.25rem; }
+  .agent-card .fixes { background: var(--code-bg); padding: 0.5rem 0.75rem; border-radius: 4px; margin-top: 0.5rem; font-size: 0.875rem; }
+  @media (max-width: 800px) { .docs-layout { grid-template-columns: 1fr; } .toc { position: static; } }
+{% endblock %}
+
+{% block content %}
+<h1>Course Manual</h1>
+<p class="subtle">Everything in one place. Use Ctrl+F or the sidebar to find what you need.</p>
+
+<div class="docs-layout">
+
+{# ── Table of Contents (sticky sidebar) ──────────────────────────────── #}
+<nav class="toc">
+  <a href="#setup" class="toc-h2">Getting Started</a>
+  <a href="#setup-clone">Clone the repo</a>
+  <a href="#setup-deps">Install dependencies</a>
+  <a href="#setup-vscode">VS Code setup</a>
+  <a href="#setup-run">Run locally</a>
+
+  <a href="#exercise" class="toc-h2">The Exercise</a>
+  <a href="#exercise-what">What you're building</a>
+  <a href="#exercise-loop">The loop</a>
+  <a href="#exercise-arc">The 2.5-hour arc</a>
+
+  <a href="#first-pr" class="toc-h2">Your First PR</a>
+
+  <a href="#architecture" class="toc-h2">Architecture</a>
+  <a href="#arch-topology">Three-host topology</a>
+  <a href="#arch-locked">The locked core</a>
+
+  <a href="#metrics" class="toc-h2">The Metrics Tab</a>
+  <a href="#metrics-slots">Labelled slots</a>
+  <a href="#metrics-bidirectional">Bidirectional framing</a>
+  <a href="#metrics-projection">Projection calculator</a>
+
+  <a href="#agents" class="toc-h2">The 9 Agents</a>
+  <a href="#agent-1">1. secrets-scan</a>
+  <a href="#agent-2">2. code-quality</a>
+  <a href="#agent-3">3. red-team</a>
+  <a href="#agent-4">4. blue-team</a>
+  <a href="#agent-5">5. classroom-safety</a>
+  <a href="#agent-6">6. version-discipline</a>
+  <a href="#agent-7">7. build-and-smoke</a>
+  <a href="#agent-8">8. slop-and-scope</a>
+  <a href="#agent-9">9. malicious-code-review</a>
+
+  <a href="#backlog" class="toc-h2">Feature Backlog</a>
+
+  <a href="#troubleshooting" class="toc-h2">Troubleshooting</a>
+</nav>
+
+{# ── Main content ────────────────────────────────────────────────────── #}
+<div class="docs-body">
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="setup">
+<h2>Getting Started</h2>
+
+<p>You need: <strong>VS Code</strong>, <strong>Python 3.12+</strong>, <strong>git</strong>, and a <strong>GitHub account</strong> that's been added as a collaborator on the repo.</p>
+
+<div class="setup-step" id="setup-clone">
+<h4>1. Clone the repo</h4>
+<pre>git clone git@github.com:wize73-ai/slim.git
+cd slim</pre>
+<p class="subtle">If you haven't set up SSH keys with GitHub, use HTTPS instead:<br>
+<code>git clone https://github.com/wize73-ai/slim.git</code></p>
+</div>
+
+<div class="setup-step" id="setup-deps">
+<h4>2. Create a virtual environment and install dependencies</h4>
+<pre># Create the venv
+python3 -m venv .venv
+
+# Activate it
+# Mac/Linux:
+source .venv/bin/activate
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+
+# Install everything
+pip install -r requirements.txt -r requirements-dev.txt</pre>
+<p class="subtle">If <code>python3</code> isn't found, try <code>python</code>. You need 3.12 or higher — check with <code>python3 --version</code>.</p>
+</div>
+
+<div class="setup-step" id="setup-vscode">
+<h4>3. Open in VS Code</h4>
+<pre>code .</pre>
+<p>VS Code will prompt you to <strong>install recommended extensions</strong> — click <strong>Install All</strong>. This gives you:</p>
+<ul>
+  <li><strong>Ruff</strong> — auto-formats and auto-fixes Python on every save</li>
+  <li><strong>Pylance</strong> — type checking, autocomplete, go-to-definition</li>
+  <li><strong>mypy</strong> — strict type checking on core/</li>
+  <li><strong>GitLens</strong> — git blame, history, PR integration</li>
+  <li><strong>TOML + YAML + Jinja</strong> — syntax highlighting for config files and templates</li>
+</ul>
+<p class="subtle">The project ships <code>.vscode/settings.json</code> that configures ruff-on-save automatically. You don't need to change any VS Code settings.</p>
+</div>
+
+<div class="setup-step" id="setup-run">
+<h4>4. Run the app locally</h4>
+<p>The chatbot needs an inference server. Since you can't reach the real one from your laptop, we ship a <strong>mock</strong> that returns canned responses — enough to test the UI, the metrics tab, and the projection calculator.</p>
+<pre># Terminal 1: start the mock inference server
+python .devcontainer/mock-guapo.py &amp;
+
+# Terminal 2: start the app
+OPENAI_BASE_URL=http://127.0.0.1:9999/v1 uvicorn app.main:app --reload --port 8080</pre>
+<p>Open <a href="http://localhost:8080">http://localhost:8080</a> in your browser. You should see the landing page. Click <strong>Chat</strong> and send a message — you'll get a mock response. Click <strong>Metrics</strong> — the token flow chart will populate with real (mocked) data.</p>
+<p class="subtle">The <code>--reload</code> flag makes uvicorn restart when you save a file, so you see changes instantly.</p>
+</div>
+
+<div class="setup-step">
+<h4>5. Verify everything works</h4>
+<pre># Run the preflight checks locally
+./scripts/preflight.sh</pre>
+<p>If this prints <strong>✓ preflight passed</strong>, you're ready to start building.</p>
+</div>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="exercise">
+<h2>The Exercise</h2>
+
+<h3 id="exercise-what">What you're building</h3>
+<p>You inherit a <strong>deliberately bad chatbot</strong> — single turn, no memory, no persona, no style. You also inherit a <strong>fully working measurement rig</strong> that shows you exactly what every chat turn costs in tokens, time, and compute.</p>
+<p>Your job: make the chatbot better while watching the measurements. Add personas, conversation history, few-shot examples, streaming, voice, better UI — each as a separate PR. After each merge, watch the <a href="/metrics">Metrics</a> tab and see what your change actually cost.</p>
+<p><strong>The point isn't the chatbot. The point is learning to feel what design decisions cost.</strong></p>
+
+<h3 id="exercise-loop">The loop</h3>
+<ol>
+  <li><strong>Branch</strong> from main: <code>git checkout -b feature/add-cooking-persona</code></li>
+  <li><strong>Edit</strong> files under <code>app/</code> (that's where your code goes)</li>
+  <li><strong>Preflight</strong>: <code>./scripts/preflight.sh</code> runs all 9 agents locally in ~15 seconds</li>
+  <li><strong>Commit</strong> with a conventional message: <code>feat: add cooking persona</code></li>
+  <li><strong>Push</strong> and open a PR</li>
+  <li><strong>9 agents</strong> review your code in parallel (~90 seconds). Fix what they find.</li>
+  <li><strong>Merge</strong> when all agents are green</li>
+  <li><strong>Deploy</strong> happens automatically — your change is live at class.wize73.com in ~90 seconds</li>
+  <li><strong>Verify</strong> on the Metrics tab — watch what moved</li>
+</ol>
+
+<h3>Where you can edit</h3>
+<ul>
+  <li><strong>You CAN edit:</strong> anything under <code>app/</code> — personas, system prompts, few-shot examples, templates, the chat handler, routes, static assets.</li>
+  <li><strong>You CANNOT edit:</strong> <code>core/</code>, <code>docker/</code>, <code>.github/</code>, <code>docs/</code>, <code>.devcontainer/</code>. These are locked. If you need a change there, open an issue.</li>
+  <li><strong>You CANNOT add dependencies.</strong> <code>requirements.txt</code> is locked. Need a new package? File an issue tagged <code>needs-dep</code>.</li>
+</ul>
+
+<h3>Commit message format</h3>
+<p>We use <a href="https://www.conventionalcommits.org/">Conventional Commits</a>. Agent 6 enforces this.</p>
+<pre>feat: add cooking persona with weeknight-dinner focus
+fix: chat UI crashes when persona file is empty
+docs: explain the token flow chart
+refactor: split persona loader into its own module
+test: add round-trip test for the security preamble</pre>
+
+<h3 id="exercise-arc">The 2.5-hour class arc</h3>
+<table>
+  <tr><td style="white-space:nowrap"><strong>0:00 – 0:20</strong></td><td>Orientation. Tour the site, demo the chat, demo the metrics tab.</td></tr>
+  <tr><td><strong>0:20 – 0:35</strong></td><td>Everyone opens a trivial first PR. Watch the agents. Calibrate.</td></tr>
+  <tr><td><strong>0:35 – 1:50</strong></td><td>Feature work from the <a href="#backlog">backlog below</a>. Open PRs, iterate with agent feedback, merge, watch deploys.</td></tr>
+  <tr><td><strong>1:50 – 2:15</strong></td><td>Red-team round. Try to break someone else's feature. Bugs become PRs.</td></tr>
+  <tr><td><strong>2:15 – 2:30</strong></td><td>Wrap. Look at the cumulative metrics. Discuss what cost more than it was worth.</td></tr>
+</table>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="first-pr">
+<h2>Your First PR</h2>
+<p>Walk this once before tackling a real feature. It calibrates you to the agents and the deploy loop.</p>
+
+<ol>
+  <li><strong>Branch:</strong> <code>git checkout -b feature/my-first-persona</code></li>
+  <li><strong>Create a file</strong> at <code>app/personas/cooking.yaml</code>:
+<pre>name: Cooking Assistant
+description: A friendly home cook who explains techniques.
+tone: warm, practical
+constraints:
+  - Prefer metric with imperial in parentheses
+  - Never suggest raw eggs or raw pork</pre>
+  </li>
+  <li><strong>Preflight:</strong> <code>./scripts/preflight.sh</code> — should pass</li>
+  <li><strong>Commit:</strong> <code>git add app/personas/cooking.yaml && git commit -m "feat: add cooking persona"</code></li>
+  <li><strong>Push:</strong> <code>git push -u origin feature/my-first-persona</code></li>
+  <li><strong>Open the PR</strong> on GitHub (or <code>gh pr create --fill</code>). Fill in the template — especially the "AI assistant" and "cost impact" sections.</li>
+  <li><strong>Wait ~90 seconds</strong> for the 9 agents to run. All should pass for a file-only change.</li>
+  <li><strong>Merge</strong> when green.</li>
+  <li><strong>Watch the deploy</strong> in the GitHub Actions tab (~90 seconds).</li>
+  <li><strong>Verify</strong> at <a href="/">class.wize73.com</a>. The persona file is now on disk in the running container.</li>
+</ol>
+<p class="subtle">Total time: ~5 minutes from branch to live. Real features have more iteration with the agents, but the shape is the same.</p>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="architecture">
+<h2>Architecture</h2>
+
+<h3 id="arch-topology">Where things run</h3>
+<p>Three components, one host (for this class):</p>
+<pre style="text-align:center; font-size:0.8rem">
+browser (you) ──→ Cloudflare (TLS + SSO) ──→ Cloudflare Tunnel
+                                                    │
+                                              ┌─────▼──────┐
+                                              │   guapo     │
+                                              │ ├ app       │  ← the chatbot (what you build)
+                                              │ ├ sidecar   │  ← host metrics
+                                              │ ├ agent-proxy│  ← CI's inference path
+                                              │ ├ phi-4-mini │  ← chat (vLLM)
+                                              │ ├ whisper    │  ← speech-to-text
+                                              │ └ XTTS-v2   │  ← text-to-speech
+                                              └─────────────┘
+</pre>
+<p>The chatbot and the AI models run on the same machine. Students never access the machine directly — they interact via the GitHub repo and the public URL.</p>
+
+<h3 id="arch-locked">The locked core</h3>
+<p><code>core/</code> is CODEOWNERS-protected. You consume its APIs but cannot edit it. This guarantees:</p>
+<ul>
+  <li><strong>Measurement integrity</strong> — the token counts and timing numbers stay trustworthy across PRs. If students could tweak the measurement code, two PRs could report different costs for identical changes.</li>
+  <li><strong>Security boundary</strong> — the security preamble (tells the model not to leak infrastructure details) and the output filter (catches leaks anyway) cannot be bypassed.</li>
+  <li><strong>Dependency lock</strong> — you can't add Python packages without an instructor issue. Closes the supply-chain attack vector.</li>
+</ul>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="metrics">
+<h2>The Metrics Tab</h2>
+<p>Open <a href="/metrics">/metrics</a> in a second browser tab and <strong>keep it open during the entire class</strong>. When you merge a change, watch what moves.</p>
+
+<h3 id="metrics-slots">Labelled slots</h3>
+<p>Every chat turn is built from <strong>labelled slots</strong>:</p>
+<pre>
+[security preamble — locked, ~280 tok]
+[baseline prompt — locked, ~190 tok]
+[your system prompt — initially empty]
+[your persona — initially empty]
+[few-shot examples — initially empty]
+[conversation history — grows each turn]
+[user message — the current input]
+</pre>
+<p>The metrics tab decomposes each turn into these slots so you can see <strong>exactly where the tokens come from</strong>. When you add a 60-token persona, you'll see the system slot grow by 60 — and that 60 is paid on every turn for the rest of the session.</p>
+
+<h3 id="metrics-bidirectional">Bidirectional framing</h3>
+<p><strong>Every metric has an in/out or pre/post axis.</strong> The asymmetry between the two halves is where the lessons live:</p>
+<ul>
+  <li><strong>Input vs output tokens</strong> — are you sending more than you're getting back, or vice versa?</li>
+  <li><strong>Prefill vs decode time</strong> — prefill scales with input size, decode with output. Two different optimization knobs.</li>
+  <li><strong>Network in vs out</strong> — catches "you're shipping the entire history to the model every turn"</li>
+</ul>
+<p>A persona that summarises (short output from long input) clusters in a different place on the asymmetry chart than a persona that writes creatively (long output from short input). Watch where yours falls.</p>
+
+<h3 id="metrics-projection">Projection calculator</h3>
+<p>On the metrics tab, enter a planned architecture (system size, persona size, few-shot count, history retention, planned turns) and see projected per-turn costs <strong>before you build anything</strong>. Compare the projection to your actual session afterwards — the gap is where the learning happens.</p>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="agents">
+<h2>The 9 Agents</h2>
+<p>Every PR runs these 9 agents in parallel. All must pass for the merge button to enable. Run <code>./scripts/preflight.sh</code> locally to catch most issues before pushing.</p>
+<p class="subtle">If an agent fails and you don't understand why: <code>./scripts/explain-failure.sh &lt;agent-name&gt;</code></p>
+
+<div class="agent-card" id="agent-1">
+<h4>1. secrets-scan</h4>
+<p>Catches hardcoded secrets, leaked URLs, anything that exposes the inference server's identity.</p>
+<div class="fixes"><strong>Fix:</strong> never hardcode URLs or IPs. Use <code>os.environ['OPENAI_BASE_URL']</code>. Don't put server names in comments either.</div>
+</div>
+
+<div class="agent-card" id="agent-2">
+<h4>2. code-quality</h4>
+<p>ruff format + ruff check (strict) + mypy strict on core/ + pytest + docstring coverage. Auto-fixes what it can and commits the fixes back to your branch.</p>
+<div class="fixes"><strong>Fix:</strong> <code>ruff format . && ruff check --fix . && mypy core/ && pytest</code>. Most failures auto-resolve. The ones that don't need type hints or docstrings added manually.</div>
+</div>
+
+<div class="agent-card" id="agent-3">
+<h4>3. red-team</h4>
+<p>Builds your container and runs 12 adversarial probes — tries to extract the server URL, leak the system prompt, jailbreak the persona. Also checks a usability canary (your chatbot must NOT refuse legitimate questions).</p>
+<div class="fixes"><strong>Fix:</strong> don't override the security preamble. Don't make your persona so restrictive it refuses everything. The security preamble in <code>core/chat/security.py</code> already handles refusals for infrastructure questions.</div>
+</div>
+
+<div class="agent-card" id="agent-4">
+<h4>4. blue-team</h4>
+<p>Defensive code review. Checks that calls to the inference server are wrapped in try/except, that user input is validated, that error handling exists.</p>
+<div class="fixes"><strong>Fix:</strong> wrap <code>stream_completion()</code> calls with <code>except UpstreamUnavailable</code> / <code>except UpstreamTimeout</code> / <code>except ChatError</code>. Return a friendly error banner, not a crash.</div>
+</div>
+
+<div class="agent-card" id="agent-5">
+<h4>5. classroom-safety</h4>
+<p>Reviews the <em>content</em> of new persona / system prompt / few-shot files for age-appropriateness. Different from secrets-scan — this is about WHAT the chatbot is told to say.</p>
+<div class="fixes"><strong>Fix:</strong> don't put profanity in persona text. Don't impersonate real teachers or students by name.</div>
+</div>
+
+<div class="agent-card" id="agent-6">
+<h4>6. version-discipline</h4>
+<p>Pinned dependencies, locked paths untouched, conventional commit messages, PR description non-empty.</p>
+<div class="fixes"><strong>Fix:</strong> use <code>feat:</code> / <code>fix:</code> / <code>docs:</code> commit prefixes. Don't edit files under <code>core/</code>. Fill in the PR description template.</div>
+</div>
+
+<div class="agent-card" id="agent-7">
+<h4>7. build-and-smoke</h4>
+<p>Builds the Docker image from your branch and runs a smoke test. Verifies the metrics tab's locked markers are still present — catches PRs that accidentally break the measurement surface.</p>
+<div class="fixes"><strong>Fix:</strong> if the build fails, you have a Python syntax error. Run <code>python3 -c "import ast; ast.parse(open('your_file.py').read())"</code>. If the smoke test fails, you broke a locked template — revert that change.</div>
+</div>
+
+<div class="agent-card" id="agent-8">
+<h4>8. slop-and-scope</h4>
+<p>AST-based detection of dead code, premature abstractions, hallucinated imports, and scope creep (your diff vs the linked issue).</p>
+<div class="fixes"><strong>Fix:</strong> delete functions nothing calls. Remove abstractions with only one consumer. Verify every <code>from X import Y</code> points at a real module. Stick to the issue scope — if you found something else to fix, open a separate PR.</div>
+</div>
+
+<div class="agent-card" id="agent-9">
+<h4>9. malicious-code-review</h4>
+<p>Insider-threat detection. Semgrep + bandit + AST scanner for danger primitives (eval, exec, subprocess shell=True) + entropy detector for obfuscated payloads + time-bomb pattern detector. Intentionally paranoid — false positives are cheap.</p>
+<div class="fixes"><strong>Fix:</strong> if you tripped this legitimately, explain what you were doing in the PR description. The instructor has been notified and will review. Most common false positives: dynamic string construction, env var reads with TOKEN/KEY in the name.</div>
+</div>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="backlog">
+<h2>Feature Backlog</h2>
+<p>Pick one. Each is sized for a single PR in one sitting. The full list with details is at <a href="https://github.com/wize73-ai/slim/wiki/07-Feature-Backlog">the wiki</a>.</p>
+
+<h3>★ easy (~15 min)</h3>
+<ul>
+  <li><strong>Add a persona</strong> — one YAML file under <code>app/personas/</code></li>
+  <li><strong>Add a few-shot example block</strong> — YAML under <code>app/examples/</code></li>
+  <li><strong>Improve the chat UI</strong> — edit <code>app/templates/chat.html</code>. Typography, layout, anything.</li>
+</ul>
+
+<h3>★★ medium (~30-60 min)</h3>
+<ul>
+  <li><strong>Wire up persona loading</strong> — make <code>build_request()</code> actually USE persona files</li>
+  <li><strong>Add conversation history</strong> — session state + the history slot. Watch the trajectory chart ramp.</li>
+  <li><strong>Add a temperature slider</strong> — control the model's randomness per turn</li>
+  <li><strong>Add SSE streaming</strong> — tokens appear as they arrive. HTMX <code>sse-swap</code>.</li>
+  <li><strong>Improve error banners</strong> — different messages for different failures</li>
+</ul>
+
+<h3>★★★ hard (~1-2 hours)</h3>
+<ul>
+  <li><strong>Voice input</strong> — microphone → whisper STT → chat. The endpoint is on the backend already.</li>
+  <li><strong>Voice output</strong> — XTTS-v2 TTS → audio playback. Same backend.</li>
+  <li><strong>Persona picker dropdown</strong> — read <code>app/personas/</code>, show a dropdown, track per-persona metrics</li>
+  <li><strong>Content filter</strong> — validate user input before sending to the model</li>
+  <li><strong>Token budget warnings</strong> — show a banner when context fills up</li>
+  <li><strong>Compare two prompts side by side</strong> — the pedagogical power move</li>
+</ul>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════ #}
+<section id="troubleshooting">
+<h2>Troubleshooting</h2>
+
+<h3>An agent is failing and I don't understand why</h3>
+<pre>./scripts/explain-failure.sh          # explains current PR's failures
+./scripts/explain-failure.sh red-team # explains a specific agent
+./scripts/explain-failure.sh --list   # lists all 9 agents</pre>
+
+<h3>My changes work locally but the deploy fails</h3>
+<p>The deploy auto-rolls back within 30 seconds. Check the GitHub Actions tab for the failing step. Most common: a startup error in your code. The instructor can check <code>docker logs</code> on the server.</p>
+
+<h3>The public URL returns 502</h3>
+<p>The app container is down. The instructor will restart it. Wait 30 seconds and refresh.</p>
+
+<h3>The metrics tab is blank</h3>
+<p>No chat turns have happened yet — the buffer starts empty. Have a conversation and the charts populate.</p>
+
+<h3>I want to roll back a broken merge</h3>
+<p>The auto-rollback handles most broken deploys within 30 seconds. For manual rollback, the instructor has a one-command script on the server. Don't panic — fix forward in the next PR.</p>
+
+<h3>I broke main</h3>
+<p>The deploy auto-rolled back (if it tripped the health check) or the instructor will roll back manually. Open a follow-up PR that fixes the issue. Don't try <code>git revert</code> — just fix forward.</p>
+
+<h3>I can't push because branch protection rejects me</h3>
+<p>You're trying to push directly to <code>main</code>. Open a PR instead — direct pushes are blocked.</p>
+
+<h3>Docker build fails on my Mac (ARM)</h3>
+<pre>docker buildx build --platform=linux/amd64 -f docker/app/Dockerfile -t wize73-app:local .</pre>
+
+<h3>I have no idea what I'm doing</h3>
+<p>Walk through <a href="#first-pr">Your First PR</a> above, step by step. By the end you'll have made one successful PR and understand the full loop. Then ask the <a href="/guide">AI Guide mentor</a> any concept questions.</p>
+
+<h3>None of this helps</h3>
+<p>Tag the instructor in your PR description or open an issue. They're monitoring during class and will respond quickly.</p>
+</section>
+
+</div>{# end docs-body #}
+</div>{# end docs-layout #}
+{% endblock %}

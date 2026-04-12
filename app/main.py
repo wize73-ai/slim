@@ -141,6 +141,16 @@ async def guide_page(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/docs", response_class=HTMLResponse)
+async def docs_page(request: Request) -> HTMLResponse:
+    """Render the comprehensive course manual (one scrollable page)."""
+    return templates.TemplateResponse(
+        request=request,
+        name="docs.html",
+        context={},
+    )
+
+
 @app.post("/chat", response_class=HTMLResponse)
 async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
     """Single-turn chat handler. No history, no persona — that's the point.
