@@ -101,7 +101,7 @@ templates = Jinja2Templates(
 # FastAPI app
 # ────────────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="class.wize73.com")
+app = FastAPI(title="class.wize73.com", docs_url=None, redoc_url=None)
 
 if APP_STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(APP_STATIC_DIR)), name="static")
