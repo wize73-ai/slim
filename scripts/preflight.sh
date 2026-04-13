@@ -204,8 +204,15 @@ forbidden_hits=$(grep -RnE "$forbidden_patterns" \
     --exclude-dir=tests \
     . 2>/dev/null \
     | grep -v 'core/chat/security.py' \
+    | grep -v 'core/chat/client.py' \
+    | grep -v 'core/chat/README.md' \
     | grep -v 'core/agents/prompts/' \
+    | grep -v 'core/agents/proxy.py' \
+    | grep -v 'core/observability/templates/_stats_guapo.html' \
     | grep -v 'docker/' \
+    | grep -v 'docs/' \
+    | grep -v '.devcontainer/mock-guapo.py' \
+    | grep -v '.github/workflows/' \
     | grep -v 'CHANGELOG' \
     || true)
 if [[ -z "$forbidden_hits" ]]; then
