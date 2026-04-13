@@ -17,12 +17,20 @@
   <form hx-post="/chat"
         hx-target="#response"
         hx-swap="innerHTML"
-        hx-disabled-elt="textarea, button"
+        hx-disabled-elt="textarea, button, input"
         hx-indicator="#loading">
     <label for="message"><strong>Say something:</strong></label>
-    <textarea id="message" name="user_message" rows="3"
+    <textarea id="message"
+              name="user_message"
+              rows="3"
               placeholder="Ask the dumb v1 chatbot a question..."
               required></textarea>
+
+    <label class="compare-toggle" for="compare_mode">
+      <input id="compare_mode" type="checkbox" name="compare_mode" value="true">
+      <span>Compare prompt A vs prompt B</span>
+    </label>
+
     <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem;">
       <button type="submit">Send</button>
       <span id="loading" class="htmx-indicator subtle">waiting on guapo…</span>
@@ -51,10 +59,43 @@
 </ul>
 
 <style>
-  .htmx-indicator { opacity: 0; transition: opacity 0.2s; }
-  .htmx-request .htmx-indicator { opacity: 1; }
-  .assistant-response { padding: 1rem; background: white; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
-  .assistant-response pre { background: transparent; border: none; padding: 0; white-space: pre-wrap; font-family: inherit; }
-  .assistant-response.error { background: #fef2f2; border-color: var(--err); color: var(--err); }
+  .htmx-indicator {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .htmx-request .htmx-indicator {
+    opacity: 1;
+  }
+
+  .assistant-response {
+    padding: 1rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 1rem;
+  }
+
+  .assistant-response pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    white-space: pre-wrap;
+    font-family: inherit;
+  }
+
+  .assistant-response.error {
+    background: #fef2f2;
+    border-color: var(--err);
+    color: var(--err);
+  }
+
+  .compare-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-weight: 500;
+  }
 </style>
 {% endblock %}
