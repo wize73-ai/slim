@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% set active = "chat" %}
 
 {% block title %}Chat · class.wize73.com{% endblock %}
@@ -345,12 +345,33 @@
   .placeholder-line.mid {
     width: 64%;
   }
+  .user-message {
+    padding: 1rem;
+    background: rgba(19, 38, 58, 0.06);
+    color: var(--chat-ink);
+    border: 1px solid var(--chat-line);
+    border-radius: 16px;
+    margin-bottom: 0.5rem;
+  }
+  .chat-shell[data-theme="dark"] .user-message {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+  .user-message pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0.45rem 0 0;
+    white-space: pre-wrap;
+    font-family: inherit;
+  }
   .assistant-response {
     padding: 1rem;
     background: rgba(255, 255, 255, 0.98);
     color: #13263a;
     border: 1px solid rgba(19, 38, 58, 0.12);
     border-radius: 16px;
+    margin-bottom: 0.5rem;
   }
   .chat-shell[data-theme="dark"] .assistant-response {
     background: rgba(12, 22, 33, 0.92);
@@ -455,14 +476,15 @@
             Start with the baseline reply, then use the metrics tab to judge whether your improvements are worth the budget.
           </p>
         </div>
-        <span class="mode-chip">single-turn mode</span>
+        <span class="mode-chip">multi-turn mode</span>
       </div>
 
       <form hx-post="/chat"
-            hx-target="#response"
-            hx-swap="innerHTML"
+            hx-target="#conversation"
+            hx-swap="beforeend"
             hx-disabled-elt="textarea, button"
             hx-indicator="#loading">
+        <input type="hidden" name="history" id="chat-history" value="[]">
         <label for="message">Prompt the model</label>
         <textarea id="message" name="user_message" rows="4"
                   placeholder="Ask a question, test tone, or probe the baseline behavior..."
@@ -470,13 +492,13 @@
 
         <div class="toolbar">
           <div class="toolbar-meta subtle">
-            <span>no history</span>
-            <span>no persona</span>
+            <span>client-side history</span>
+            <span>pirate persona</span>
             <span>metrics-ready</span>
           </div>
           <div class="toolbar-actions">
             <span id="loading" class="htmx-indicator subtle">waiting on guapo...</span>
-            <button type="button" class="button-secondary" onclick="document.getElementById('message').value=''; document.getElementById('response').innerHTML='<div class=&quot;response-placeholder subtle&quot;><div class=&quot;placeholder-line short&quot;></div><div class=&quot;placeholder-line&quot;></div><div class=&quot;placeholder-line mid&quot;></div><p>Responses will appear here. Nothing\'s been said yet.</p></div>';">Reset panel</button>
+            <button type="button" class="button-secondary" id="new-conversation">New conversation</button>
             <button type="submit" class="button-primary">Send prompt</button>
           </div>
         </div>
@@ -494,9 +516,9 @@
         <h2>Strong Next Moves</h2>
         <ul class="sidebar-list subtle">
           <li>Add a few-shot example block</li>
-          <li>Wire up persona loading</li>
-          <li>Add conversation history</li>
           <li>Stream responses token by token</li>
+          <li>Add voice input/output</li>
+          <li>Improve the content filter</li>
         </ul>
       </div>
     </aside>
@@ -513,7 +535,8 @@
       <span class="status-chip">response console</span>
     </div>
     <div id="response" class="response-frame">
-      <div class="response-placeholder subtle">
+      <div id="conversation"></div>
+      <div id="response-placeholder" class="response-placeholder subtle">
         <div class="placeholder-line short"></div>
         <div class="placeholder-line"></div>
         <div class="placeholder-line mid"></div>
@@ -530,6 +553,7 @@
 
 {% block extra_js %}
 <script>
+  // Theme toggle
   (function () {
     const shell = document.getElementById("chat-shell");
     const button = document.getElementById("theme-toggle");
@@ -563,6 +587,47 @@
       const nextTheme = shell.dataset.theme === "dark" ? "light" : "dark";
       localStorage.setItem(storageKey, nextTheme);
       applyTheme(nextTheme);
+    });
+  })();
+
+  // Chat history tracking
+  (() => {
+    let history = [];
+    let pendingUserText = "";
+    const historyInput = document.getElementById("chat-history");
+    const conversationDiv = document.getElementById("conversation");
+    const textarea = document.getElementById("message");
+    const newConvoBtn = document.getElementById("new-conversation");
+    const placeholder = document.getElementById("response-placeholder");
+
+    document.body.addEventListener("htmx:configRequest", () => {
+      historyInput.value = JSON.stringify(history);
+      pendingUserText = textarea.value.trim();
+    });
+
+    document.body.addEventListener("htmx:afterSwap", (e) => {
+      if (e.detail.target !== conversationDiv) return;
+
+      // Hide placeholder on first message
+      if (placeholder) placeholder.style.display = "none";
+
+      const lastResponse = conversationDiv.querySelector(
+        ".assistant-response:last-child"
+      );
+      if (!lastResponse || lastResponse.classList.contains("error")) return;
+
+      const assistantText = lastResponse.querySelector("pre")?.textContent ?? "";
+      history.push({ role: "user", content: pendingUserText });
+      history.push({ role: "assistant", content: assistantText });
+      textarea.value = "";
+    });
+
+    newConvoBtn.addEventListener("click", () => {
+      history = [];
+      historyInput.value = "[]";
+      conversationDiv.innerHTML = "";
+      textarea.value = "";
+      if (placeholder) placeholder.style.display = "";
     });
   })();
 </script>

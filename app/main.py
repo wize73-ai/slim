@@ -27,6 +27,7 @@ by wiring in personas, examples, and history as they implement features.
 from __future__ import annotations
 
 import html
+import json
 
 import yaml
 
@@ -41,8 +42,6 @@ import os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-from pathlib import Path
-
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -51,6 +50,7 @@ from fastapi.templating import Jinja2Templates
 from core.chat import (
     ChatError,
     FilterBlocked,
+    HistoryMessage,
     UpstreamTimeout,
     UpstreamUnavailable,
     build_request,
@@ -179,24 +179,35 @@ async def docs_page(request: Request) -> HTMLResponse:
 
 
 @app.post("/chat", response_class=HTMLResponse)
-async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
-    """Single-turn chat handler. No history, no persona — that's the point.
+async def chat(
+    request: Request,  # noqa: ARG001
+    user_message: str = Form(...),
+    history: str = Form(""),
+) -> HTMLResponse:
+    """Multi-turn chat handler with client-side history.
 
-    Students extend by adding those slots to ``build_request()`` as they
-    implement features. The per-turn token-flow snapshot goes into the
-    observability ring buffer so the metrics tab shows what the turn
-    cost.
+    The browser sends the conversation history as a JSON array of
+    ``{role, content}`` objects in a hidden form field. We parse it
+    into :class:`HistoryMessage` objects and pass it to
+    :func:`build_request` so the model sees prior turns.
     """
-    del request  # unused in v1 — Jinja isn't needed for the response fragment
-
-    # Non-empty validation. In v1 we return an error fragment rather than
-    # 400, so HTMX can swap it into the response area.
     user_message = user_message.strip()
     if not user_message:
         return HTMLResponse(
             content='<div class="assistant-response error">Type something first.</div>',
             status_code=400,
         )
+
+    # Parse client-side history JSON into HistoryMessage tuples.
+    history_messages: tuple[HistoryMessage, ...] = ()
+    if history:
+        try:
+            raw = json.loads(history)
+            history_messages = tuple(
+                HistoryMessage(role=h["role"], content=h["content"]) for h in raw
+            )
+        except (json.JSONDecodeError, KeyError, TypeError):
+            history_messages = ()
 
     try:
         with instrument() as t:
@@ -207,6 +218,7 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
                 baseline=BASELINE_PROMPT,
                 persona=persona_prompt,
                 user=user_message,
+                history=history_messages,
             )
 
             t.mark("t1")
@@ -272,11 +284,15 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
             status_code=500,
         )
 
-    # Render the assistant response. html.escape prevents XSS from any
-    # content the model might produce, including legitimate code samples.
+    # Render the full turn (user + assistant) so HTMX can append it.
+    safe_user = html.escape(user_message)
     safe_output = html.escape(output_text)
     return HTMLResponse(
         content=(
+            '<div class="user-message">'
+            '<strong>you:</strong><br>'
+            f'<pre>{safe_user}</pre>'
+            '</div>'
             '<div class="assistant-response">'
             "<strong>assistant:</strong><br>"
             f"<pre>{safe_output}</pre>"
