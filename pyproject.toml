@@ -45,6 +45,7 @@ dev = [
     "interrogate==1.7.0",
     "bandit==1.8.0",
     "semgrep==1.100.0",
+    "types-PyYAML==6.0.12.20240917",
 ]
 
 [project.urls]
