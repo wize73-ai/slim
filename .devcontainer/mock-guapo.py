@@ -34,11 +34,14 @@ What it does NOT implement:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import json
 import time
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 app = FastAPI(title="mock-guapo", docs_url=None, redoc_url=None)
@@ -110,39 +113,72 @@ async def models() -> dict[str, Any]:
 
 
 @app.post("/v1/chat/completions")
-async def chat_completions(req: _ChatRequest) -> dict[str, Any]:
-    """Return a canned response shaped like the real OpenAI API."""
-    # Pick a deterministic response based on the input hash so the
-    # agent-proxy cache layer behaves correctly.
+async def chat_completions(req: _ChatRequest) -> Any:
+    """Return a canned response shaped like the real OpenAI API.
+
+    when stream=True, yields SSE chunks word by word so the streaming
+    endpoint has something to actually stream.
+    """
     body = "\n".join(m.content for m in req.messages)
     digest = int(hashlib.sha256(body.encode()).hexdigest(), 16)
     response_text = _RESPONSES[digest % len(_RESPONSES)]
+    mock_id = f"mock-{digest:x}"[:24]
 
-    # Approximate tokens (4 chars per token is a reasonable rule of thumb).
-    prompt_tokens = max(1, len(body) // 4)
-    completion_tokens = max(1, len(response_text) // 4)
+    if not req.stream:
+        prompt_tokens = max(1, len(body) // 4)
+        completion_tokens = max(1, len(response_text) // 4)
+        return {
+            "id": mock_id,
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": req.model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": response_text},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            },
+        }
 
-    return {
-        "id": f"mock-{digest:x}"[:24],
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": req.model,
-        "choices": [
-            {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": response_text,
-                },
-                "finish_reason": "stop",
+    # streaming path — yield one word at a time with a small delay
+    async def _stream():
+        words = response_text.split(" ")
+        for i, word in enumerate(words):
+            chunk_text = word if i == 0 else f" {word}"
+            chunk = {
+                "id": mock_id,
+                "object": "chat.completion.chunk",
+                "created": int(time.time()),
+                "model": req.model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"role": "assistant", "content": chunk_text} if i == 0 else {"content": chunk_text},
+                        "finish_reason": None,
+                    }
+                ],
             }
-        ],
-        "usage": {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": prompt_tokens + completion_tokens,
-        },
-    }
+            yield f"data: {json.dumps(chunk)}\n\n"
+            await asyncio.sleep(0.05)  # ~20 words/sec — visible but not painful
+
+        # final chunk
+        done_chunk = {
+            "id": mock_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": req.model,
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        }
+        yield f"data: {json.dumps(done_chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
 
 
 if __name__ == "__main__":

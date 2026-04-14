@@ -29,8 +29,8 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, Query, Request
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -250,6 +250,72 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
             f'<pre>{safe_output}</pre>'
             '</div>'
         )
+    )
+
+
+@app.get("/chat/stream")
+async def chat_stream(
+    user_message: str = Query(...),
+) -> StreamingResponse:
+    """streaming SSE endpoint — yields raw text chunks as they arrive.
+
+    the POST /chat route stays intact. this is additive.
+    client reads via fetch + ReadableStream and appends chunks to the DOM.
+    """
+    user_message = user_message.strip()
+    if not user_message:
+        async def _empty():
+            yield "data: [ERROR]type something first.\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(_empty(), media_type="text/event-stream")
+
+    async def _generate():
+        output_parts: list[str] = []
+        try:
+            with instrument() as t:
+                messages = build_request(
+                    baseline=BASELINE_PROMPT,
+                    user=user_message,
+                )
+                t.mark("t1")
+
+                async for chunk in stream_completion(messages, instrument=t):
+                    output_parts.append(chunk)
+                    # encode newlines so each chunk is a valid single SSE event
+                    safe = chunk.replace("\n", "\ndata: ")
+                    yield f"data: {safe}\n\n"
+
+                output_text = "".join(output_parts)
+                output_tokens = count_tokens(output_text)
+                ring_buffer.submit_flow(
+                    t.request_id,
+                    TokenFlowSnapshot(
+                        system_tokens=messages.system_tokens,
+                        persona_tokens=messages.persona_tokens,
+                        examples_tokens=messages.examples_tokens,
+                        history_tokens=messages.history_tokens,
+                        user_tokens=messages.user_tokens,
+                        output_tokens=output_tokens,
+                    ),
+                )
+        except (UpstreamUnavailable, UpstreamTimeout, FilterBlocked, ChatError) as e:
+            msg = {
+                UpstreamUnavailable: "inference service unavailable. try again in a moment.",
+                UpstreamTimeout: "inference service timed out. try a shorter prompt.",
+                FilterBlocked: "response was filtered. try rephrasing.",
+                ChatError: "something went wrong with the chat call.",
+            }.get(type(e), "something went wrong.")
+            yield f"data: [ERROR]{msg}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={
+            "cache-control": "no-cache",
+            "x-accel-buffering": "no",
+        },
     )
 
 
