@@ -27,6 +27,20 @@ by wiring in personas, examples, and history as they implement features.
 from __future__ import annotations
 
 import html
+
+import yaml
+
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load .env from project root
+REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(REPO_ROOT / ".env")
+
+import os
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
@@ -64,6 +78,21 @@ REPO_ROOT = APP_DIR.parent
 APP_TEMPLATES_DIR = APP_DIR / "templates"
 APP_STATIC_DIR = APP_DIR / "static"
 CORE_TEMPLATES_DIR = REPO_ROOT / "core" / "templates"
+
+# Personas
+PERSONAS_DIR = APP_DIR / "personas"
+
+#import yaml
+
+def load_persona(key: str) -> str | None:
+    path = PERSONAS_DIR / f"{key}.yaml"
+    if not path.exists():
+        return None
+
+    with open(path, "r") as f:
+        data = yaml.safe_load(f)
+
+    return data.get("system_prompt")
 
 # ────────────────────────────────────────────────────────────────────────────
 # Shared state — created once at module load and plumbed into sub-apps
@@ -171,10 +200,15 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
 
     try:
         with instrument() as t:
+
+            persona_prompt = load_persona("pirate")  # hardcoded v1
+
             messages = build_request(
                 baseline=BASELINE_PROMPT,
+                persona=persona_prompt,
                 user=user_message,
             )
+
             t.mark("t1")
 
             output_parts: list[str] = []
