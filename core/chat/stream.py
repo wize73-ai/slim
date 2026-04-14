@@ -86,7 +86,7 @@ async def stream_completion(
 
     try:
         stream = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=messages.to_openai_messages(),  # type: ignore[arg-type]
             stream=True,
             temperature=temperature,
