@@ -127,33 +127,6 @@ def _render_error(
     )
 
 
-async def _collect_output(messages: object, timer: object) -> tuple[str, int]:
-    """Stream a completion and return the joined text and token count."""
-    output_parts = [chunk async for chunk in stream_completion(messages, instrument=timer)]
-    output_text = "".join(output_parts)
-    output_tokens = count_tokens(output_text)
-    return output_text, output_tokens
-
-
-def _submit_flow(
-    request_id: str,
-    messages: object,
-    output_tokens: int,
-) -> None:
-    """Submit token flow data to the observability ring buffer."""
-    ring_buffer.submit_flow(
-        request_id,
-        TokenFlowSnapshot(
-            system_tokens=messages.system_tokens,
-            persona_tokens=messages.persona_tokens,
-            examples_tokens=messages.examples_tokens,
-            history_tokens=messages.history_tokens,
-            user_tokens=messages.user_tokens,
-            output_tokens=output_tokens,
-        ),
-    )
-
-
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request) -> HTMLResponse:
     """Render the styled landing page with exercise instructions."""
@@ -218,8 +191,21 @@ async def chat(
                 )
                 t.mark("t1")
 
-                output_text, output_tokens = await _collect_output(messages, t)
-                _submit_flow(t.request_id, messages, output_tokens)
+                output_parts = [chunk async for chunk in stream_completion(messages, instrument=t)]
+                output_text = "".join(output_parts)
+                output_tokens = count_tokens(output_text)
+
+                ring_buffer.submit_flow(
+                    t.request_id,
+                    TokenFlowSnapshot(
+                        system_tokens=messages.system_tokens,
+                        persona_tokens=messages.persona_tokens,
+                        examples_tokens=messages.examples_tokens,
+                        history_tokens=messages.history_tokens,
+                        user_tokens=messages.user_tokens,
+                        output_tokens=output_tokens,
+                    ),
+                )
 
             safe_output = html.escape(output_text)
             response_html = (
@@ -239,8 +225,23 @@ async def chat(
                 )
                 t_a.mark("t1")
 
-                output_text_a, output_tokens_a = await _collect_output(messages_a, t_a)
-                _submit_flow(t_a.request_id, messages_a, output_tokens_a)
+                output_parts_a = [
+                    chunk async for chunk in stream_completion(messages_a, instrument=t_a)
+                ]
+                output_text_a = "".join(output_parts_a)
+                output_tokens_a = count_tokens(output_text_a)
+
+                ring_buffer.submit_flow(
+                    t_a.request_id,
+                    TokenFlowSnapshot(
+                        system_tokens=messages_a.system_tokens,
+                        persona_tokens=messages_a.persona_tokens,
+                        examples_tokens=messages_a.examples_tokens,
+                        history_tokens=messages_a.history_tokens,
+                        user_tokens=messages_a.user_tokens,
+                        output_tokens=output_tokens_a,
+                    ),
+                )
 
             with instrument() as t_b:
                 messages_b = build_request(
@@ -249,8 +250,23 @@ async def chat(
                 )
                 t_b.mark("t1")
 
-                output_text_b, output_tokens_b = await _collect_output(messages_b, t_b)
-                _submit_flow(t_b.request_id, messages_b, output_tokens_b)
+                output_parts_b = [
+                    chunk async for chunk in stream_completion(messages_b, instrument=t_b)
+                ]
+                output_text_b = "".join(output_parts_b)
+                output_tokens_b = count_tokens(output_text_b)
+
+                ring_buffer.submit_flow(
+                    t_b.request_id,
+                    TokenFlowSnapshot(
+                        system_tokens=messages_b.system_tokens,
+                        persona_tokens=messages_b.persona_tokens,
+                        examples_tokens=messages_b.examples_tokens,
+                        history_tokens=messages_b.history_tokens,
+                        user_tokens=messages_b.user_tokens,
+                        output_tokens=output_tokens_b,
+                    ),
+                )
 
             safe_output_a = html.escape(output_text_a)
             safe_output_b = html.escape(output_text_b)
@@ -324,7 +340,17 @@ async def mentor_chat(
             output_text = "".join(output_parts)
             output_tokens = count_tokens(output_text)
 
-            _submit_flow(t.request_id, messages, output_tokens)
+            ring_buffer.submit_flow(
+                t.request_id,
+                TokenFlowSnapshot(
+                    system_tokens=messages.system_tokens,
+                    persona_tokens=messages.persona_tokens,
+                    examples_tokens=messages.examples_tokens,
+                    history_tokens=messages.history_tokens,
+                    user_tokens=messages.user_tokens,
+                    output_tokens=output_tokens,
+                ),
+            )
     except UpstreamUnavailable:
         return HTMLResponse(
             content=(
