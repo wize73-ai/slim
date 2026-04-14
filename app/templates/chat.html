@@ -1,60 +1,569 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% set active = "chat" %}
 
 {% block title %}Chat · class.wize73.com{% endblock %}
 
+{% block extra_css %}
+  .chat-shell {
+    --chat-ink: #13263a;
+    --chat-steel: #4d647a;
+    --chat-paper: #f6f1e8;
+    --chat-cream: #fffdf9;
+    --chat-accent: #d88b17;
+    --chat-accent-deep: #ad6706;
+    --chat-line: rgba(19, 38, 58, 0.12);
+    --chat-shadow: 0 18px 38px rgba(19, 38, 58, 0.08);
+    --chat-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(253, 251, 245, 0.96));
+    --chat-sidebar-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(253, 251, 245, 0.96));
+    --chat-response-surface: linear-gradient(180deg, #1a3550 0%, #20415f 100%);
+    --chat-response-border: 1px solid rgba(255, 255, 255, 0.12);
+    --chat-response-text: #eef4f8;
+    --chat-meta-bg: #edf3f8;
+    --chat-meta-text: #33516a;
+    --chat-input-bg: linear-gradient(180deg, #fffdfa 0%, #ffffff 100%);
+    --chat-input-border: rgba(19, 38, 58, 0.14);
+    --chat-secondary-bg: #eef4f8;
+    --chat-secondary-text: #173853;
+    --chat-secondary-border: rgba(19, 38, 58, 0.12);
+    --chat-link: #0b5cad;
+    --chat-link-hover: #084a8a;
+    display: grid;
+    gap: 1rem;
+    animation: page-rise 320ms ease-out;
+  }
+  .chat-shell[data-theme="dark"] {
+    --chat-ink: #edf4fb;
+    --chat-steel: #9bb0c5;
+    --chat-paper: #162638;
+    --chat-cream: #1b2f43;
+    --chat-line: rgba(237, 244, 251, 0.10);
+    --chat-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+    --chat-surface: linear-gradient(180deg, rgba(28, 46, 66, 0.98), rgba(22, 37, 56, 0.98));
+    --chat-sidebar-surface: linear-gradient(180deg, rgba(31, 50, 72, 0.98), rgba(23, 39, 58, 0.98));
+    --chat-response-surface: linear-gradient(180deg, #0f1c2a 0%, #132536 100%);
+    --chat-response-border: 1px solid rgba(255, 255, 255, 0.08);
+    --chat-response-text: #edf4fb;
+    --chat-meta-bg: rgba(255, 255, 255, 0.08);
+    --chat-meta-text: #d6e2ee;
+    --chat-input-bg: linear-gradient(180deg, rgba(14, 24, 36, 0.95), rgba(18, 30, 44, 0.98));
+    --chat-input-border: rgba(237, 244, 251, 0.12);
+    --chat-secondary-bg: rgba(255, 255, 255, 0.08);
+    --chat-secondary-text: #edf4fb;
+    --chat-secondary-border: rgba(237, 244, 251, 0.12);
+    --chat-link: #ffd27f;
+    --chat-link-hover: #ffe4b3;
+  }
+  .chat-shell a {
+    color: var(--chat-link);
+  }
+  .chat-shell a:hover {
+    color: var(--chat-link-hover);
+  }
+  .chat-hero {
+    border: 1px solid var(--chat-line);
+    border-radius: 22px;
+    background: linear-gradient(180deg, #1c3852 0 3.7rem, var(--chat-paper) 3.7rem 100%);
+    box-shadow: var(--chat-shadow);
+    overflow: hidden;
+  }
+  .chat-shell[data-theme="dark"] .chat-hero {
+    background: linear-gradient(180deg, #0f2235 0 3.7rem, #162638 3.7rem 100%);
+  }
+  .chat-hero-inner {
+    display: grid;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem 1.2rem;
+  }
+  .hero-copy {
+    max-width: 40rem;
+  }
+  .hero-topbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #f7efe0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.10);
+    color: #f8f1e6;
+    border-radius: 999px;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .theme-toggle:hover {
+    filter: brightness(1.06);
+  }
+  .hero-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+    gap: 1rem;
+    align-items: end;
+  }
+  .chat-hero h1 {
+    margin: 0;
+    color: #17314a;
+    font-family: Georgia, "Palatino Linotype", serif;
+    font-size: clamp(1.9rem, 4.2vw, 2.9rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    max-width: 8.5ch;
+  }
+  .chat-shell[data-theme="dark"] .chat-hero h1 {
+    color: #edf4fb;
+  }
+  .chat-hero p {
+    margin: 0;
+    color: #33516a;
+    font-size: 1rem;
+    max-width: 35rem;
+  }
+  .chat-shell[data-theme="dark"] .chat-hero p {
+    color: #b8c8d8;
+  }
+  .hero-text {
+    display: grid;
+    gap: 0.65rem;
+  }
+  .hero-stats {
+    display: grid;
+    gap: 0.7rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stat-tile {
+    padding: 0.95rem 1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(19, 38, 58, 0.10);
+  }
+  .chat-shell[data-theme="dark"] .stat-tile {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+  .stat-tile strong {
+    display: block;
+    color: var(--chat-ink);
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+  .stat-tile span {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--chat-steel);
+    font-size: 0.77rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .chat-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.9fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  .composer-card,
+  .response-card,
+  .sidebar-card {
+    padding: 1.15rem;
+    border-radius: 22px;
+    border: 1px solid var(--chat-line);
+    box-shadow: var(--chat-shadow);
+  }
+  .composer-card,
+  .sidebar-card {
+    background: var(--chat-surface);
+  }
+  .sidebar-card {
+    background: var(--chat-sidebar-surface);
+  }
+  .response-card {
+    background: var(--chat-response-surface);
+    color: var(--chat-response-text);
+  }
+  .composer-head,
+  .response-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 0.9rem;
+  }
+  .composer-head h2,
+  .response-head h2,
+  .sidebar-card h2 {
+    margin: 0 0 0.22rem;
+    color: var(--chat-ink);
+    font-size: 1rem;
+  }
+  .response-head h2,
+  .response-card p,
+  .response-card .subtle {
+    color: inherit;
+  }
+  .mode-chip,
+  .status-chip {
+    padding: 0.35rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .mode-chip {
+    background: #fff1d7;
+    border: 1px solid rgba(173, 103, 6, 0.12);
+    color: var(--chat-accent-deep);
+  }
+  .chat-shell[data-theme="dark"] .mode-chip {
+    background: rgba(216, 139, 23, 0.16);
+    border-color: rgba(216, 139, 23, 0.22);
+    color: #ffd79b;
+  }
+  .status-chip {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f6f3ea;
+  }
+  .composer-card label {
+    display: block;
+    margin-bottom: 0.45rem;
+    color: var(--chat-ink);
+    font-weight: 700;
+  }
+  .composer-card textarea {
+    min-height: 10rem;
+    padding: 1rem;
+    border-radius: 18px;
+    border: 1px solid var(--chat-input-border);
+    background: var(--chat-input-bg);
+    color: var(--chat-ink);
+  }
+  .composer-card textarea:focus {
+    outline: 2px solid rgba(216, 139, 23, 0.18);
+    border-color: rgba(216, 139, 23, 0.44);
+  }
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.9rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+  }
+  .toolbar-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .toolbar-meta span {
+    padding: 0.28rem 0.62rem;
+    border-radius: 999px;
+    background: var(--chat-meta-bg);
+    color: var(--chat-meta-text);
+    font-size: 0.82rem;
+  }
+  .toolbar-actions {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .toolbar-actions button {
+    border-radius: 999px;
+    padding: 0.72rem 1.18rem;
+    font-weight: 700;
+  }
+  .button-secondary {
+    background: var(--chat-secondary-bg);
+    color: var(--chat-secondary-text);
+    border: 1px solid var(--chat-secondary-border);
+  }
+  .button-primary {
+    background: linear-gradient(135deg, var(--chat-accent-deep), var(--chat-accent));
+    box-shadow: 0 10px 20px rgba(216, 139, 23, 0.20);
+  }
+  .htmx-indicator {
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .htmx-request .htmx-indicator {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .sidebar-section + .sidebar-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--chat-line);
+  }
+  .sidebar-list {
+    margin: 0.75rem 0 0;
+    padding-left: 1.15rem;
+    color: var(--chat-meta-text);
+  }
+  .sidebar-list li + li {
+    margin-top: 0.45rem;
+  }
+  .response-frame {
+    min-height: 11rem;
+    margin-top: 0.8rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    border: var(--chat-response-border);
+  }
+  .response-placeholder {
+    display: grid;
+    gap: 0.8rem;
+  }
+  .placeholder-line {
+    height: 0.78rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(216, 139, 23, 0.62), rgba(255, 255, 255, 0.18));
+  }
+  .placeholder-line.short {
+    width: 38%;
+  }
+  .placeholder-line.mid {
+    width: 64%;
+  }
+  .assistant-response {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.98);
+    color: #13263a;
+    border: 1px solid rgba(19, 38, 58, 0.12);
+    border-radius: 16px;
+  }
+  .chat-shell[data-theme="dark"] .assistant-response {
+    background: rgba(12, 22, 33, 0.92);
+    color: #edf4fb;
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+  .assistant-response pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0.45rem 0 0;
+    white-space: pre-wrap;
+    font-family: inherit;
+  }
+  .assistant-response.error {
+    background: #fff1f2;
+    border-color: #efc2c8;
+    color: #b42318;
+  }
+  .response-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+    color: rgba(238, 244, 248, 0.74);
+    font-size: 0.88rem;
+  }
+  @keyframes page-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 900px) {
+    .hero-body,
+    .chat-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 620px) {
+    .chat-hero-inner,
+    .composer-card,
+    .response-card,
+    .sidebar-card {
+      padding: 1rem;
+    }
+    .hero-topbar,
+    .composer-head,
+    .response-head,
+    .toolbar,
+    .hero-body {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .hero-stats,
+    .toolbar-actions button,
+    .theme-toggle {
+      width: 100%;
+      grid-template-columns: 1fr;
+    }
+  }
+{% endblock %}
+
 {% block content %}
-<h1>class chatbot <span class="badge warn">v1 — dumb</span></h1>
-
-<p class="subtle">
-  Single turn. No memory. No persona. No streaming. No style. The
-  <a href="/metrics">metrics tab</a> shows you what each change you make
-  costs. Make this chatbot better — every feature you add shows up
-  measurable in the metrics.
-</p>
-
-<div class="card">
-  <form hx-post="/chat"
-        hx-target="#response"
-        hx-swap="innerHTML"
-        hx-disabled-elt="textarea, button"
-        hx-indicator="#loading">
-    <label for="message"><strong>Say something:</strong></label>
-    <textarea id="message" name="user_message" rows="3"
-              placeholder="Ask the dumb v1 chatbot a question..."
-              required></textarea>
-    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem;">
-      <button type="submit">Send</button>
-      <span id="loading" class="htmx-indicator subtle">waiting on guapo…</span>
+<div class="chat-shell" id="chat-shell" data-theme="light">
+  <section class="chat-hero">
+    <div class="chat-hero-inner">
+      <div class="hero-topbar">
+        <div class="hero-kicker">v1 baseline · intentionally simple</div>
+        <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+          🌙
+        </button>
+      </div>
+      <div class="hero-body">
+        <div class="hero-text">
+          <h1>Build the chatbot. Feel the cost.</h1>
+          <p>
+            This page is your experiment bench: simple enough to improve, polished enough to present,
+            and directly connected to <a href="/metrics">Metrics</a> so every UI or prompt decision has
+            a visible trade-off.
+          </p>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-tile">
+            <strong>1 turn</strong>
+            <span>current memory budget</span>
+          </div>
+          <div class="stat-tile">
+            <strong>0 personas</strong>
+            <span>extra context loaded</span>
+          </div>
+        </div>
+      </div>
     </div>
-  </form>
+  </section>
+
+  <div class="chat-grid">
+    <section class="composer-card">
+      <div class="composer-head">
+        <div>
+          <h2>Chat Playground</h2>
+          <p class="subtle">
+            Start with the baseline reply, then use the metrics tab to judge whether your improvements are worth the budget.
+          </p>
+        </div>
+        <span class="mode-chip">single-turn mode</span>
+      </div>
+
+      <form hx-post="/chat"
+            hx-target="#response"
+            hx-swap="innerHTML"
+            hx-disabled-elt="textarea, button"
+            hx-indicator="#loading">
+        <label for="message">Prompt the model</label>
+        <textarea id="message" name="user_message" rows="4"
+                  placeholder="Ask a question, test tone, or probe the baseline behavior..."
+                  required></textarea>
+
+        <div class="toolbar">
+          <div class="toolbar-meta subtle">
+            <span>no history</span>
+            <span>no persona</span>
+            <span>metrics-ready</span>
+          </div>
+          <div class="toolbar-actions">
+            <span id="loading" class="htmx-indicator subtle">waiting on guapo...</span>
+            <button type="button" class="button-secondary" onclick="document.getElementById('message').value=''; document.getElementById('response').innerHTML='<div class=&quot;response-placeholder subtle&quot;><div class=&quot;placeholder-line short&quot;></div><div class=&quot;placeholder-line&quot;></div><div class=&quot;placeholder-line mid&quot;></div><p>Responses will appear here. Nothing\'s been said yet.</p></div>';">Reset panel</button>
+            <button type="submit" class="button-primary">Send prompt</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <aside class="sidebar-card">
+      <div class="sidebar-section">
+        <h2>Why This Works For Class</h2>
+        <p class="subtle">
+          The page now reads more clearly, puts the prompt box first, and still leaves obvious space for feature work you can explain in a PR.
+        </p>
+      </div>
+      <div class="sidebar-section">
+        <h2>Strong Next Moves</h2>
+        <ul class="sidebar-list subtle">
+          <li>Add a few-shot example block</li>
+          <li>Wire up persona loading</li>
+          <li>Add conversation history</li>
+          <li>Stream responses token by token</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <section class="response-card">
+    <div class="response-head">
+      <div>
+        <h2>Assistant Response</h2>
+        <p class="subtle">
+          Clearer waiting state, stronger contrast, and a reset action make this easier to use in a live demo.
+        </p>
+      </div>
+      <span class="status-chip">response console</span>
+    </div>
+    <div id="response" class="response-frame">
+      <div class="response-placeholder subtle">
+        <div class="placeholder-line short"></div>
+        <div class="placeholder-line"></div>
+        <div class="placeholder-line mid"></div>
+        <p>Responses will appear here. Nothing's been said yet.</p>
+      </div>
+    </div>
+    <div class="response-footer">
+      <span>Use this page for visible UX improvements.</span>
+      <span>Use Metrics to explain what changed.</span>
+    </div>
+  </section>
 </div>
+{% endblock %}
 
-<div id="response">
-  <p class="subtle">Responses will appear here. Nothing's been said yet.</p>
-</div>
+{% block extra_js %}
+<script>
+  (function () {
+    const shell = document.getElementById("chat-shell");
+    const button = document.getElementById("theme-toggle");
+    if (!shell || !button) {
+      return;
+    }
 
-<h2>What this chatbot doesn't do</h2>
-<p class="subtle">
-  Each of these is a starter issue in the <a href="/docs#backlog">Feature Backlog</a>.
-  Pick one and ship it.
-</p>
-<ul class="subtle">
-  <li>No conversation history — every turn starts from nothing</li>
-  <li>No persona — every response sounds the same bland way</li>
-  <li>No few-shot examples — the model has no style to copy</li>
-  <li>No streaming — you wait for the entire response before seeing anything</li>
-  <li>No content filter — hopes and prayers on the student input side</li>
-  <li>No voice input — whisper-large-v3-turbo is available on the frozen surface</li>
-  <li>No voice output — XTTS-v2 is also available on the frozen surface</li>
-  <li>No styling to speak of — the default CSS is the default CSS</li>
-</ul>
+    const storageKey = "chat-theme";
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-<style>
-  .htmx-indicator { opacity: 0; transition: opacity 0.2s; }
-  .htmx-request .htmx-indicator { opacity: 1; }
-  .assistant-response { padding: 1rem; background: white; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
-  .assistant-response pre { background: transparent; border: none; padding: 0; white-space: pre-wrap; font-family: inherit; }
-  .assistant-response.error { background: #fef2f2; border-color: var(--err); color: var(--err); }
-</style>
+    function buttonLabel(theme) {
+      return theme === "dark" ? "Light mode" : "Dark mode";
+    }
+
+    function buttonIcon(theme) {
+      return theme === "dark" ? "☀️" : "🌙";
+    }
+
+    function applyTheme(theme) {
+      shell.dataset.theme = theme;
+      button.textContent = buttonIcon(theme);
+      button.setAttribute("aria-label", buttonLabel(theme));
+      button.setAttribute("title", buttonLabel(theme));
+    }
+
+    const savedTheme = localStorage.getItem(storageKey);
+    const initialTheme = savedTheme || (mediaQuery.matches ? "dark" : "light");
+    applyTheme(initialTheme);
+
+    button.addEventListener("click", function () {
+      const nextTheme = shell.dataset.theme === "dark" ? "light" : "dark";
+      localStorage.setItem(storageKey, nextTheme);
+      applyTheme(nextTheme);
+    });
+  })();
+</script>
 {% endblock %}
