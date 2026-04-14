@@ -93,9 +93,7 @@ MENTOR_PROMPT = load_mentor()
 # Templates — search app/templates/ first, then core/templates/ for base.html
 # ────────────────────────────────────────────────────────────────────────────
 
-templates = Jinja2Templates(
-    directory=[str(APP_TEMPLATES_DIR), str(CORE_TEMPLATES_DIR)]
-)
+templates = Jinja2Templates(directory=[str(APP_TEMPLATES_DIR), str(CORE_TEMPLATES_DIR)])
 
 # ────────────────────────────────────────────────────────────────────────────
 # FastAPI app
@@ -152,7 +150,10 @@ async def docs_page(request: Request) -> HTMLResponse:
 
 
 @app.post("/chat", response_class=HTMLResponse)
-async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
+# The `temperature` parameter automatically extracts the slider value submitted by HTMX
+async def chat(
+    request: Request, user_message: str = Form(...), temperature: float = Form(0.7)
+) -> HTMLResponse:
     """Single-turn chat handler. No history, no persona — that's the point.
 
     Students extend by adding those slots to ``build_request()`` as they
@@ -179,11 +180,14 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
             )
             t.mark("t1")
 
-            output_parts: list[str] = []
-            async for chunk in stream_completion(messages, instrument=t):
-                output_parts.append(chunk)
-
-            output_text = "".join(output_parts)
+            output_text = "".join(
+                [
+                    chunk
+                    async for chunk in stream_completion(
+                        messages, instrument=t, temperature=temperature
+                    )
+                ]
+            )
             output_tokens = count_tokens(output_text)
 
             # Submit the flow snapshot. The timing emitter (wired by
@@ -246,16 +250,16 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
     return HTMLResponse(
         content=(
             '<div class="assistant-response">'
-            '<strong>assistant:</strong><br>'
-            f'<pre>{safe_output}</pre>'
-            '</div>'
+            "<strong>assistant:</strong><br>"
+            f"<pre>{safe_output}</pre>"
+            "</div>"
         )
     )
 
 
 @app.post("/guide/chat", response_class=HTMLResponse)
 async def mentor_chat(
-    request: Request, user_message: str = Form(...)  # noqa: ARG001
+    user_message: str = Form(...),
 ) -> HTMLResponse:
     """Mentor chatbot on the AI Guide tab. Same backend, teaching prompt.
 
@@ -278,11 +282,9 @@ async def mentor_chat(
             )
             t.mark("t1")
 
-            output_parts: list[str] = []
-            async for chunk in stream_completion(messages, instrument=t):
-                output_parts.append(chunk)
-
-            output_text = "".join(output_parts)
+            output_text = "".join(
+                [chunk async for chunk in stream_completion(messages, instrument=t)]
+            )
             output_tokens = count_tokens(output_text)
 
             ring_buffer.submit_flow(
@@ -317,9 +319,7 @@ async def mentor_chat(
     except ChatError:
         return HTMLResponse(
             content=(
-                '<div class="mentor-response error">'
-                "Something went wrong. Try again."
-                "</div>"
+                '<div class="mentor-response error">' "Something went wrong. Try again." "</div>"
             ),
             status_code=500,
         )
