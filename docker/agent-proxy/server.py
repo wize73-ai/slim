@@ -40,6 +40,7 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -79,7 +80,7 @@ logging.basicConfig(
 log = logging.getLogger("agent-proxy")
 
 
-def log_event(**fields: Any) -> None:
+def log_event(**fields: Any) -> None:  # noqa: ANN401
     """Emit one structured log line."""
     fields.setdefault("ts", time.time())
     log.info(json.dumps(fields))
@@ -196,7 +197,7 @@ class ChatCompletionRequest(BaseModel):
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Validate config on startup so misconfiguration fails loudly."""
     if BEARER_TOKEN is None:
         log_event(level="error", msg="AGENT_PROXY_TOKEN env var not set, refusing to start")

@@ -51,15 +51,22 @@ def docker_run(image: str, name: str, host_port: int) -> str:
     """Start the container in detached mode and return its container id."""
     print(f"==> starting {image} as {name} on host port {host_port}")
     # Stop any leftover container with the same name from a prior run.
-    subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+    subprocess.run(["docker", "rm", "-f", name], capture_output=True, check=False)
     result = run(
         [
-            "docker", "run", "-d",
-            "--name", name,
-            "-p", f"{host_port}:8080",
-            "-e", f"OPENAI_BASE_URL={MOCK_OPENAI_URL}",
-            "-e", "OPENAI_API_KEY=sk-test",
-            "-e", "SLIM_SIDECAR_URL=",  # disabled for smoke
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            name,
+            "-p",
+            f"{host_port}:8080",
+            "-e",
+            f"OPENAI_BASE_URL={MOCK_OPENAI_URL}",
+            "-e",
+            "OPENAI_API_KEY=sk-test",
+            "-e",
+            "SLIM_SIDECAR_URL=",  # disabled for smoke
             image,
         ]
     )
@@ -69,16 +76,14 @@ def docker_run(image: str, name: str, host_port: int) -> str:
 def docker_logs(name: str) -> None:
     """Print the container's logs to stderr for debugging."""
     print("==> container logs:", file=sys.stderr)
-    result = subprocess.run(
-        ["docker", "logs", name], capture_output=True, text=True
-    )
+    result = subprocess.run(["docker", "logs", name], capture_output=True, text=True, check=False)
     print(result.stdout, file=sys.stderr)
     print(result.stderr, file=sys.stderr)
 
 
 def docker_stop(name: str) -> None:
     """Stop and remove the container."""
-    subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+    subprocess.run(["docker", "rm", "-f", name], capture_output=True, check=False)
 
 
 def fetch(url: str, timeout: float = 5.0) -> tuple[int, dict[str, Any] | str]:
@@ -107,7 +112,7 @@ def wait_for_health(host_port: int, timeout: int) -> bool:
     while time.monotonic() - start < timeout:
         try:
             status, body = fetch(url, timeout=2.0)
-            if status == 200:
+            if status == 200:  # noqa: PLR2004
                 print(f"    /healthz ok: {body}")
                 return True
         except (urllib.error.URLError, ConnectionError):
@@ -116,7 +121,7 @@ def wait_for_health(host_port: int, timeout: int) -> bool:
     return False
 
 
-def smoke_test(image: str, name: str, host_port: int) -> int:
+def smoke_test(image: str, name: str, host_port: int) -> int:  # noqa: C901
     """Run the full smoke test sequence. Returns exit code."""
     cid = docker_run(image, name, host_port)
     print(f"    container id: {cid[:12]}")
@@ -144,7 +149,7 @@ def smoke_test(image: str, name: str, host_port: int) -> int:
             print(f"==> GET {path}")
             try:
                 status, body = fetch(f"{base}{path}")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failures.append(f"{path} threw {type(e).__name__}: {e}")
                 continue
             if status != expected_status:
@@ -158,15 +163,17 @@ def smoke_test(image: str, name: str, host_port: int) -> int:
         # markers — guards against a PR that nukes the locked template.
         print("==> verifying /metrics/ contains the locked tab markers")
         status, body = fetch(f"{base}/metrics/")
-        if status == 200 and isinstance(body, str):
+        if status == 200 and isinstance(body, str):  # noqa: PLR2004
             required_markers = [
                 "Token flow by turn",
                 "Projection calculator",
                 'href="/metrics/turns"',  # raw JSON link
             ]
-            for marker in required_markers:
-                if marker not in body:
-                    failures.append(f"/metrics/ missing marker: {marker!r}")
+            failures.extend(
+                f"/metrics/ missing marker: {marker!r}"
+                for marker in required_markers
+                if marker not in body
+            )
             if not any(f.startswith("/metrics/ missing marker") for f in failures):
                 print("    ✓ all locked markers present")
         else:

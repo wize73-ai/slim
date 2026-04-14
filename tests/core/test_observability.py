@@ -25,7 +25,6 @@ from core.observability.ring_buffer import (
 )
 from core.timing import TimingRecord
 
-
 # ────────────────────────────────────────────────────────────────────────────
 # RingBuffer
 # ────────────────────────────────────────────────────────────────────────────
@@ -287,9 +286,14 @@ class TestProjection:
         assert wall_turn.input_tokens + wall_turn.output_tokens > 200
 
     def test_no_context_wall_when_fits(self):
-        spec = self._spec(planned_turns=3, system_tokens=10, persona_tokens=0,
-                          few_shot_count=0, avg_user_msg_tokens=5,
-                          avg_assistant_reply_tokens=5)
+        spec = self._spec(
+            planned_turns=3,
+            system_tokens=10,
+            persona_tokens=0,
+            few_shot_count=0,
+            avg_user_msg_tokens=5,
+            avg_assistant_reply_tokens=5,
+        )
         result = project(spec, self._default_coeffs())
         assert result.context_wall_at_turn is None
 

@@ -202,6 +202,7 @@ forbidden_hits=$(grep -RnE "$forbidden_patterns" \
     --exclude-dir=node_modules \
     --exclude-dir=__pycache__ \
     --exclude-dir=tests \
+    --exclude-dir=.coverage_html \
     . 2>/dev/null \
     | grep -v 'core/chat/security.py' \
     | grep -v 'core/chat/client.py' \

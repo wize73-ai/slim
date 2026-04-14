@@ -93,9 +93,7 @@ MENTOR_PROMPT = load_mentor()
 # Templates — search app/templates/ first, then core/templates/ for base.html
 # ────────────────────────────────────────────────────────────────────────────
 
-templates = Jinja2Templates(
-    directory=[str(APP_TEMPLATES_DIR), str(CORE_TEMPLATES_DIR)]
-)
+templates = Jinja2Templates(directory=[str(APP_TEMPLATES_DIR), str(CORE_TEMPLATES_DIR)])
 
 # ────────────────────────────────────────────────────────────────────────────
 # FastAPI app
@@ -179,9 +177,7 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
             )
             t.mark("t1")
 
-            output_parts: list[str] = []
-            async for chunk in stream_completion(messages, instrument=t):
-                output_parts.append(chunk)
+            output_parts = [chunk async for chunk in stream_completion(messages, instrument=t)]
 
             output_text = "".join(output_parts)
             output_tokens = count_tokens(output_text)
@@ -246,16 +242,17 @@ async def chat(request: Request, user_message: str = Form(...)) -> HTMLResponse:
     return HTMLResponse(
         content=(
             '<div class="assistant-response">'
-            '<strong>assistant:</strong><br>'
-            f'<pre>{safe_output}</pre>'
-            '</div>'
+            "<strong>assistant:</strong><br>"
+            f"<pre>{safe_output}</pre>"
+            "</div>"
         )
     )
 
 
 @app.post("/guide/chat", response_class=HTMLResponse)
 async def mentor_chat(
-    request: Request, user_message: str = Form(...)  # noqa: ARG001
+    _request: Request,
+    user_message: str = Form(...),
 ) -> HTMLResponse:
     """Mentor chatbot on the AI Guide tab. Same backend, teaching prompt.
 
@@ -278,9 +275,7 @@ async def mentor_chat(
             )
             t.mark("t1")
 
-            output_parts: list[str] = []
-            async for chunk in stream_completion(messages, instrument=t):
-                output_parts.append(chunk)
+            output_parts = [chunk async for chunk in stream_completion(messages, instrument=t)]
 
             output_text = "".join(output_parts)
             output_tokens = count_tokens(output_text)
@@ -316,11 +311,7 @@ async def mentor_chat(
         )
     except ChatError:
         return HTMLResponse(
-            content=(
-                '<div class="mentor-response error">'
-                "Something went wrong. Try again."
-                "</div>"
-            ),
+            content=('<div class="mentor-response error">Something went wrong. Try again.</div>'),
             status_code=500,
         )
 

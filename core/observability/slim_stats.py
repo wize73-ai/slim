@@ -69,7 +69,7 @@ class SlimStatsClient:
         try:
             async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT_SECONDS) as client:
                 resp = await client.get(self._sidecar_url)
-                if resp.status_code != 200:
+                if resp.status_code != 200:  # noqa: PLR2004
                     return None
                 payload = resp.json()
                 return _parse_payload(payload)

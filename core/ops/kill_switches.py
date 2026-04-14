@@ -28,11 +28,11 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Final
 
 
-class KillSwitch(str, Enum):
+class KillSwitch(StrEnum):
     """Identifiers for the four kill switches."""
 
     PAUSE_AGENT_INFERENCE = "pause_agent_inference"
@@ -43,9 +43,7 @@ class KillSwitch(str, Enum):
 
 # One-shot switches reset to False after being read once. Persistent
 # switches stay set until the instructor clicks again.
-_ONE_SHOT_SWITCHES: Final[frozenset[KillSwitch]] = frozenset(
-    {KillSwitch.RELOAD_FIREWALL}
-)
+_ONE_SHOT_SWITCHES: Final[frozenset[KillSwitch]] = frozenset({KillSwitch.RELOAD_FIREWALL})
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +169,4 @@ class KillSwitchManager:
         """Clear every switch back to inactive. Used by tests."""
         with self._lock:
             for sw in KillSwitch:
-                self._states[sw] = SwitchState(
-                    switch=sw, active=False, set_at_ns=None, set_by=None
-                )
+                self._states[sw] = SwitchState(switch=sw, active=False, set_at_ns=None, set_by=None)

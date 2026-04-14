@@ -26,9 +26,7 @@ from fastapi import Cookie, Header, HTTPException, status
 # every process start — restarting the app invalidates all sessions, which
 # is fine for a classroom tool. If persistence across restarts is needed,
 # set OPS_COOKIE_SECRET in the environment.
-_COOKIE_SECRET: Final[str] = os.environ.get(
-    "OPS_COOKIE_SECRET", secrets.token_hex(32)
-)
+_COOKIE_SECRET: Final[str] = os.environ.get("OPS_COOKIE_SECRET", secrets.token_hex(32))
 
 # Cookie name. Prefixed with __Host- for additional browser security
 # (requires Secure, Path=/, no Domain).
@@ -75,7 +73,7 @@ def require_ops_auth(
 
     # Path 2: Bearer token (curl / non-browser).
     if authorization and authorization.startswith("Bearer "):
-        provided = authorization[len("Bearer "):]
+        provided = authorization[len("Bearer ") :]
         if _constant_time_eq(provided, expected_token):
             return "bearer"
 

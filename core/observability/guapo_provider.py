@@ -141,7 +141,7 @@ class IndirectProvider:
                 start = time.monotonic()
                 health_resp = await client.get(f"{self.base_url}/../healthz")
                 rtt_ms = (time.monotonic() - start) * 1000
-                if health_resp.status_code == 200:
+                if health_resp.status_code == 200:  # noqa: PLR2004
                     body = health_resp.json()
                     healthy = True
                     whisper_loaded = bool(body.get("whisper_loaded", False))
@@ -154,7 +154,7 @@ class IndirectProvider:
                 # Models count, best-effort. Doesn't fail the probe if it errors.
                 try:
                     models_resp = await client.get(f"{self.base_url}/models")
-                    if models_resp.status_code == 200:
+                    if models_resp.status_code == 200:  # noqa: PLR2004
                         models_body = models_resp.json()
                         data = models_body.get("data", [])
                         self._models_count = len(data) if isinstance(data, list) else 0
@@ -193,17 +193,12 @@ class IndirectProvider:
         latest = self._samples[-1]
         cutoff = latest.timestamp - _HEALTH_WINDOW_SECONDS
         recent_rtts = [
-            s.rtt_ms
-            for s in self._samples
-            if s.timestamp >= cutoff and s.rtt_ms is not None
+            s.rtt_ms for s in self._samples if s.timestamp >= cutoff and s.rtt_ms is not None
         ]
 
         avg_rtt: float | None
         stddev_rtt: float | None
-        if len(recent_rtts) >= 1:
-            avg_rtt = statistics.mean(recent_rtts)
-        else:
-            avg_rtt = None
+        avg_rtt = statistics.mean(recent_rtts) if len(recent_rtts) >= 1 else None
         if len(recent_rtts) >= _MIN_SAMPLES_FOR_STDDEV:
             stddev_rtt = statistics.pstdev(recent_rtts)
         else:

@@ -12,16 +12,16 @@ happens on every PR-agent CI job anyway).
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 # Resolve the prompts directory relative to this file. Works from any
 # CWD, which matters because PR agents run from various working dirs.
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_text(name: str) -> str:
     """Read a markdown prompt template from the prompts directory.
 
@@ -39,7 +39,7 @@ def load_text(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_yaml(name: str) -> Any:  # noqa: ANN401 — YAML loads heterogeneous shapes
     """Load a YAML rule/data file from the prompts directory.
 
@@ -73,19 +73,19 @@ def load_red_team_probes() -> list[dict[str, str]]:
 
 def load_classroom_safety_rules() -> dict[str, Any]:
     """Load the tunable classroom safety strictness configuration."""
-    return load_yaml("classroom_safety_rules.yaml")
+    return cast(dict[str, Any], load_yaml("classroom_safety_rules.yaml"))
 
 
 def load_lint_explanations() -> dict[str, str]:
     """Load the educational ruff-code → explanation lookup for agent 2."""
-    return load_yaml("lint_explanations.yaml")
+    return cast(dict[str, str], load_yaml("lint_explanations.yaml"))
 
 
 def load_discipline_explanations() -> dict[str, str]:
     """Load the educational hygiene-rule → explanation lookup for agent 6."""
-    return load_yaml("discipline_explanations.yaml")
+    return cast(dict[str, str], load_yaml("discipline_explanations.yaml"))
 
 
 def load_judge_templates() -> dict[str, str]:
     """Load the shared judge prompt templates with verdict sentinel format."""
-    return load_yaml("judge_templates.yaml")
+    return cast(dict[str, str], load_yaml("judge_templates.yaml"))

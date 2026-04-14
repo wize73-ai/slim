@@ -13,7 +13,7 @@ class ChatError(Exception):
     """Base for all core.chat errors. Catch this to handle anything we raise."""
 
 
-class UpstreamUnavailable(ChatError):
+class UpstreamUnavailable(ChatError):  # noqa: N818
     """The inference server is unreachable or returning 5xx.
 
     Surfaced as a friendly 'service is restarting, try again in a moment'
@@ -22,15 +22,15 @@ class UpstreamUnavailable(ChatError):
     """
 
 
-class UpstreamTimeout(ChatError):
+class UpstreamTimeout(ChatError):  # noqa: N818
     """The inference server accepted the request but did not respond in time."""
 
 
-class InvalidRequest(ChatError):
+class InvalidRequest(ChatError):  # noqa: N818
     """Client supplied a malformed request — bad slot, oversized history, etc."""
 
 
-class ContextWindowExceeded(ChatError):
+class ContextWindowExceeded(ChatError):  # noqa: N818
     """Composed messages exceeded the model's context window.
 
     Carries the over-budget token count so the metrics tab can show the user
@@ -41,12 +41,10 @@ class ContextWindowExceeded(ChatError):
         """Record the requested vs. maximum context size."""
         self.requested_tokens = requested_tokens
         self.max_tokens = max_tokens
-        super().__init__(
-            f"requested {requested_tokens} tokens, model max is {max_tokens}"
-        )
+        super().__init__(f"requested {requested_tokens} tokens, model max is {max_tokens}")
 
 
-class FilterBlocked(ChatError):
+class FilterBlocked(ChatError):  # noqa: N818
     """Output filter caught a guapo identifier in the response stream.
 
     This is a serious event — it means the model leaked something the security

@@ -15,7 +15,7 @@ from __future__ import annotations
 import threading
 import time
 from collections import deque
-from typing import Iterable
+from collections.abc import Iterable
 
 from core.observability.records import (
     DEFAULT_RING_BUFFER_SIZE,

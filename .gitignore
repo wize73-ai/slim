@@ -49,6 +49,7 @@ id_ed25519
 
 # Testing artifacts
 .hypothesis/
+.coverage_html/
 
 # Codespaces local state
 .devcontainer/*.log

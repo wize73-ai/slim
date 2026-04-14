@@ -41,15 +41,15 @@ class AgentProxyError(Exception):
     """
 
 
-class AgentProxyUnavailable(AgentProxyError):
+class AgentProxyUnavailable(AgentProxyError):  # noqa: N818
     """The proxy is unreachable, returning 5xx, or the kill switch is on."""
 
 
-class AgentProxyRateLimited(AgentProxyError):
+class AgentProxyRateLimited(AgentProxyError):  # noqa: N818
     """The proxy returned 429 — too many calls in this window."""
 
 
-class AgentProxyAuthFailed(AgentProxyError):
+class AgentProxyAuthFailed(AgentProxyError):  # noqa: N818
     """The proxy returned 401/403 — bearer token missing or wrong."""
 
 
@@ -110,9 +110,7 @@ async def call_proxy(
     url = proxy_url or _DEFAULT_PROXY_URL
     token = bearer_token or os.environ.get(_DEFAULT_PROXY_TOKEN_ENV)
     if not token:
-        raise AgentProxyAuthFailed(
-            f"{_DEFAULT_PROXY_TOKEN_ENV} is not set in the environment"
-        )
+        raise AgentProxyAuthFailed(f"{_DEFAULT_PROXY_TOKEN_ENV} is not set in the environment")
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -133,17 +131,13 @@ async def call_proxy(
         raise AgentProxyUnavailable(f"transport error reaching proxy: {e}") from e
 
     if response.status_code in (401, 403):
-        raise AgentProxyAuthFailed(
-            f"proxy rejected token: status {response.status_code}"
-        )
-    if response.status_code == 429:
+        raise AgentProxyAuthFailed(f"proxy rejected token: status {response.status_code}")
+    if response.status_code == 429:  # noqa: PLR2004
         raise AgentProxyRateLimited("proxy rate-limited this PR")
-    if response.status_code == 503:
+    if response.status_code == 503:  # noqa: PLR2004
         raise AgentProxyUnavailable("proxy kill switch is on, agents paused")
     if not (200 <= response.status_code < 300):  # noqa: PLR2004
-        raise AgentProxyUnavailable(
-            f"proxy returned unexpected status {response.status_code}"
-        )
+        raise AgentProxyUnavailable(f"proxy returned unexpected status {response.status_code}")
 
     try:
         payload = response.json()
@@ -156,6 +150,4 @@ async def call_proxy(
             completion_tokens=usage.get("completion_tokens"),
         )
     except (KeyError, IndexError, TypeError, ValueError) as e:
-        raise AgentProxyUnavailable(
-            f"proxy returned unexpected response shape: {e}"
-        ) from e
+        raise AgentProxyUnavailable(f"proxy returned unexpected response shape: {e}") from e

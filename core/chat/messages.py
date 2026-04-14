@@ -13,9 +13,12 @@ history means populating the ``history`` slot, etc.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Any, Final
 
 from core.chat.security import compose_system_prompt
+
+if TYPE_CHECKING:
+    import tiktoken
 
 # Tokenizer for local approximate token counts. Phi-4-mini uses a tokenizer
 # in the GPT-4o family; ``o200k_base`` is the closest match available in
@@ -29,14 +32,14 @@ from core.chat.security import compose_system_prompt
 _ENCODING_NAME: Final[str] = "o200k_base"
 
 # Lazy global; populated on first use to keep import-time light.
-_encoding = None  # type: ignore[var-annotated]
+_encoding: tiktoken.Encoding | None = None
 
 
-def _get_encoding():  # type: ignore[no-untyped-def]
+def _get_encoding() -> tiktoken.Encoding:
     """Lazily load the tiktoken encoding on first call."""
     global _encoding  # noqa: PLW0603 — module-level cache is intentional
     if _encoding is None:
-        import tiktoken
+        import tiktoken  # noqa: PLC0415
 
         _encoding = tiktoken.get_encoding(_ENCODING_NAME)
     return _encoding
@@ -116,12 +119,7 @@ class LabelledMessages:
         contribution is already inside ``system_tokens``. The total represents
         the actual cost of one turn's input on guapo.
         """
-        return (
-            self.system_tokens
-            + self.examples_tokens
-            + self.history_tokens
-            + self.user_tokens
-        )
+        return self.system_tokens + self.examples_tokens + self.history_tokens + self.user_tokens
 
     def to_openai_messages(self) -> list[dict[str, str]]:
         """Flatten into the OpenAI client messages format.
@@ -137,14 +135,11 @@ class LabelledMessages:
             A list of ``{"role": ..., "content": ...}`` dicts ready to pass
             to ``client.chat.completions.create(messages=...)``.
         """
-        msgs: list[dict[str, str]] = [
-            {"role": "system", "content": self.system_text}
-        ]
+        msgs: list[dict[str, str]] = [{"role": "system", "content": self.system_text}]
         for ex in self.examples:
             msgs.append({"role": "user", "content": ex.user})
             msgs.append({"role": "assistant", "content": ex.assistant})
-        for h in self.history:
-            msgs.append({"role": h.role, "content": h.content})
+        msgs.extend({"role": h.role, "content": h.content} for h in self.history)
         msgs.append({"role": "user", "content": self.user_text})
         return msgs
 
@@ -194,9 +189,7 @@ def build_request(
     # system_text.
     persona_tokens = count_tokens(persona)
     system_tokens = count_tokens(system_text)
-    examples_tokens = sum(
-        count_tokens(ex.user) + count_tokens(ex.assistant) for ex in examples
-    )
+    examples_tokens = sum(count_tokens(ex.user) + count_tokens(ex.assistant) for ex in examples)
     history_tokens = sum(count_tokens(h.content) for h in history)
     user_tokens = count_tokens(user)
 

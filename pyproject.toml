@@ -128,6 +128,7 @@ max-complexity = 10
     "ANN",     # annotations
     "PLR2004", # magic numbers in assertions
     "S101",    # asserts (point of pytest)
+    "PLC0415", # imports not at top level (inline imports used for readability)
 ]
 
 [tool.ruff.format]

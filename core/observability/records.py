@@ -40,12 +40,7 @@ class TokenFlowSnapshot:
     @property
     def input_total(self) -> int:
         """Sum of all input slots that hit the wire (persona excluded — embedded)."""
-        return (
-            self.system_tokens
-            + self.examples_tokens
-            + self.history_tokens
-            + self.user_tokens
-        )
+        return self.system_tokens + self.examples_tokens + self.history_tokens + self.user_tokens
 
     @property
     def total(self) -> int:
@@ -85,11 +80,7 @@ class TimingSnapshot:
     @property
     def ttft_ns(self) -> int | None:
         """Time to first token: build + send + prefill (none if any are missing)."""
-        if (
-            self.build_request_ns is None
-            or self.network_out_ns is None
-            or self.prefill_ns is None
-        ):
+        if self.build_request_ns is None or self.network_out_ns is None or self.prefill_ns is None:
             return None
         return self.build_request_ns + self.network_out_ns + self.prefill_ns
 

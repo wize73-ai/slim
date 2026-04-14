@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from core.timing import Instrument
 
 
-async def stream_completion(
+async def stream_completion(  # noqa: C901, PLR0912
     messages: LabelledMessages,
     *,
     instrument: Instrument | None = None,
@@ -101,14 +101,12 @@ async def stream_completion(
         raise UpstreamUnavailable("inference server unreachable") from e
     except APIStatusError as e:
         if 500 <= e.status_code < 600:  # noqa: PLR2004
-            raise UpstreamUnavailable(
-                f"inference server returned {e.status_code}"
-            ) from e
+            raise UpstreamUnavailable(f"inference server returned {e.status_code}") from e
         raise
 
     first_chunk = True
     try:
-        async for chunk in stream:
+        async for chunk in stream:  # type: ignore[union-attr]
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta.content

@@ -19,7 +19,6 @@ from core.chat.security import (
     compose_system_prompt,
 )
 
-
 # ────────────────────────────────────────────────────────────────────────────
 # StreamFilter — the output redaction filter
 # ────────────────────────────────────────────────────────────────────────────
@@ -47,9 +46,7 @@ class TestStreamFilterRedaction:
     def test_redacts_known_leak(self, leak):
         f = StreamFilter()
         result = f.feed(f"my model is {leak} and that's a fact") + f.flush()
-        assert leak.lower() not in result.lower(), (
-            f"leak {leak!r} reached output: {result!r}"
-        )
+        assert leak.lower() not in result.lower(), f"leak {leak!r} reached output: {result!r}"
         assert f.redaction_count >= 1
 
     def test_no_redaction_on_clean_text(self):
@@ -227,19 +224,14 @@ class TestBuildRequest:
             user="d",
         )
         expected = (
-            msgs.system_tokens
-            + msgs.examples_tokens
-            + msgs.history_tokens
-            + msgs.user_tokens
+            msgs.system_tokens + msgs.examples_tokens + msgs.history_tokens + msgs.user_tokens
         )
         assert msgs.total_input_tokens == expected
 
     def test_persona_tokens_reported_independently(self):
         from core.chat.messages import build_request
 
-        with_persona = build_request(
-            baseline="x", persona="some persona text", user="hi"
-        )
+        with_persona = build_request(baseline="x", persona="some persona text", user="hi")
         without_persona = build_request(baseline="x", user="hi")
         # Persona text contributes to system_tokens (it's embedded there)
         assert with_persona.system_tokens > without_persona.system_tokens

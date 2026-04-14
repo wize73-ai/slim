@@ -28,11 +28,11 @@ from __future__ import annotations
 import re
 import secrets
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Final
 
 
-class Verdict(str, Enum):
+class Verdict(StrEnum):
     """The three possible parsed outcomes of a judge call.
 
     String values so they serialise cleanly in GitHub check run output.
@@ -71,7 +71,7 @@ class JudgeResult:
 # Case-insensitive on PASS/FAIL but the prefix must be uppercase VERDICT:
 # so models that paraphrase ("verdict is pass") don't accidentally trigger.
 _VERDICT_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"^VERDICT:\s*(PASS|FAIL)\s*$",
+    r"^\s*VERDICT:\s*(PASS|FAIL)\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -174,10 +174,7 @@ def combine_dual_judges(
     Returns:
         The combined :class:`Verdict`. PASS only if both pass.
     """
-    if (
-        judge_a.verdict is Verdict.UNDETERMINED
-        or judge_b.verdict is Verdict.UNDETERMINED
-    ):
+    if judge_a.verdict is Verdict.UNDETERMINED or judge_b.verdict is Verdict.UNDETERMINED:
         return Verdict.UNDETERMINED
     if judge_a.verdict is Verdict.PASS and judge_b.verdict is Verdict.PASS:
         return Verdict.PASS

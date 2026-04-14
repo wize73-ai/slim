@@ -82,7 +82,7 @@ class ProjectionRequest(BaseModel):
     planned_turns: int = Field(ge=1, le=200)
 
 
-def create_metrics_app(state: MetricsState | None = None) -> FastAPI:
+def create_metrics_app(state: MetricsState | None = None) -> FastAPI:  # noqa: C901
     """Build the metrics FastAPI sub-app.
 
     Args:

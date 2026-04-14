@@ -9,7 +9,6 @@ import pytest
 from core.ops.events import Event, EventSeverity, EventStream
 from core.ops.kill_switches import KillSwitch, KillSwitchManager
 
-
 # ────────────────────────────────────────────────────────────────────────────
 # Event + EventStream
 # ────────────────────────────────────────────────────────────────────────────

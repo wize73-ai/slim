@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -31,7 +32,7 @@ _boot_time: float = 0.0
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Initialise rate-metric baselines on startup.
 
     The ``_app`` parameter is required by FastAPI's lifespan contract

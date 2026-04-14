@@ -19,8 +19,9 @@ the gap. The gap is the lesson.
 from __future__ import annotations
 
 import statistics
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Final, Iterable
+from typing import Final
 
 from core.observability.records import TurnRecord
 
@@ -45,8 +46,8 @@ DEFAULT_TOK_PER_SEC: Final[float] = 50.0
 PHI_4_MINI_CONTEXT_TOKENS: Final[int] = 8192
 
 # Per-turn FLOPs estimate uses input + output token counts:
-#   prefill_flops ≈ 2 × N_params × input_tokens
-#   decode_flops  ≈ 2 × N_params × output_tokens
+#   prefill_flops ≈ 2 x N_params x input_tokens
+#   decode_flops  ≈ 2 x N_params x output_tokens
 #
 # This is the standard back-of-envelope inference FLOPs formula and matches
 # what students will see in any modern LLM compute paper.
@@ -222,9 +223,7 @@ def project(
         planned turn plus the context-wall flag.
     """
     fixed_input = (
-        spec.system_tokens
-        + spec.persona_tokens
-        + spec.few_shot_count * spec.avg_few_shot_tokens
+        spec.system_tokens + spec.persona_tokens + spec.few_shot_count * spec.avg_few_shot_tokens
     )
 
     rows: list[ProjectedTurn] = []
