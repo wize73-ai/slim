@@ -54,12 +54,19 @@ def docker_run(image: str, name: str, host_port: int) -> str:
     subprocess.run(["docker", "rm", "-f", name], capture_output=True)
     result = run(
         [
-            "docker", "run", "-d",
-            "--name", name,
-            "-p", f"{host_port}:8080",
-            "-e", f"OPENAI_BASE_URL={MOCK_OPENAI_URL}",
-            "-e", "OPENAI_API_KEY=sk-test",
-            "-e", "SLIM_SIDECAR_URL=",  # disabled for smoke
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            name,
+            "-p",
+            f"{host_port}:8080",
+            "-e",
+            f"OPENAI_BASE_URL={MOCK_OPENAI_URL}",
+            "-e",
+            "OPENAI_API_KEY=sk-test",
+            "-e",
+            "SLIM_SIDECAR_URL=",  # disabled for smoke
             image,
         ]
     )
@@ -69,9 +76,7 @@ def docker_run(image: str, name: str, host_port: int) -> str:
 def docker_logs(name: str) -> None:
     """Print the container's logs to stderr for debugging."""
     print("==> container logs:", file=sys.stderr)
-    result = subprocess.run(
-        ["docker", "logs", name], capture_output=True, text=True
-    )
+    result = subprocess.run(["docker", "logs", name], capture_output=True, text=True)
     print(result.stdout, file=sys.stderr)
     print(result.stderr, file=sys.stderr)
 
@@ -144,7 +149,7 @@ def smoke_test(image: str, name: str, host_port: int) -> int:
             print(f"==> GET {path}")
             try:
                 status, body = fetch(f"{base}{path}")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failures.append(f"{path} threw {type(e).__name__}: {e}")
                 continue
             if status != expected_status:

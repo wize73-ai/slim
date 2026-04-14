@@ -49,12 +49,12 @@ from core.agents.proxy import (
 )
 
 __all__ = [
+    "PROMPTS_DIR",
     "AgentProxyAuthFailed",
     "AgentProxyError",
     "AgentProxyRateLimited",
     "AgentProxyUnavailable",
     "JudgeResult",
-    "PROMPTS_DIR",
     "ProxyResponse",
     "Verdict",
     "call_proxy",

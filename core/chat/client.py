@@ -48,7 +48,7 @@ def make_client() -> AsyncOpenAI:
     """
     # Lazy import so this module can be imported in test contexts that don't
     # have the openai package installed (e.g., security-only test runs).
-    from openai import AsyncOpenAI  # noqa: PLC0415
+    from openai import AsyncOpenAI
 
     base_url = os.environ["OPENAI_BASE_URL"]
     api_key = os.environ.get("OPENAI_API_KEY", "sk-local")

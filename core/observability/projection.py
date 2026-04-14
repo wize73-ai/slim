@@ -19,8 +19,9 @@ the gap. The gap is the lesson.
 from __future__ import annotations
 
 import statistics
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Final, Iterable
+from typing import Final
 
 from core.observability.records import TurnRecord
 
@@ -222,9 +223,7 @@ def project(
         planned turn plus the context-wall flag.
     """
     fixed_input = (
-        spec.system_tokens
-        + spec.persona_tokens
-        + spec.few_shot_count * spec.avg_few_shot_tokens
+        spec.system_tokens + spec.persona_tokens + spec.few_shot_count * spec.avg_few_shot_tokens
     )
 
     rows: list[ProjectedTurn] = []

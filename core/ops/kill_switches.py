@@ -43,9 +43,7 @@ class KillSwitch(str, Enum):
 
 # One-shot switches reset to False after being read once. Persistent
 # switches stay set until the instructor clicks again.
-_ONE_SHOT_SWITCHES: Final[frozenset[KillSwitch]] = frozenset(
-    {KillSwitch.RELOAD_FIREWALL}
-)
+_ONE_SHOT_SWITCHES: Final[frozenset[KillSwitch]] = frozenset({KillSwitch.RELOAD_FIREWALL})
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +169,4 @@ class KillSwitchManager:
         """Clear every switch back to inactive. Used by tests."""
         with self._lock:
             for sw in KillSwitch:
-                self._states[sw] = SwitchState(
-                    switch=sw, active=False, set_at_ns=None, set_by=None
-                )
+                self._states[sw] = SwitchState(switch=sw, active=False, set_at_ns=None, set_by=None)

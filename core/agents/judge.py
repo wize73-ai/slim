@@ -174,10 +174,7 @@ def combine_dual_judges(
     Returns:
         The combined :class:`Verdict`. PASS only if both pass.
     """
-    if (
-        judge_a.verdict is Verdict.UNDETERMINED
-        or judge_b.verdict is Verdict.UNDETERMINED
-    ):
+    if judge_a.verdict is Verdict.UNDETERMINED or judge_b.verdict is Verdict.UNDETERMINED:
         return Verdict.UNDETERMINED
     if judge_a.verdict is Verdict.PASS and judge_b.verdict is Verdict.PASS:
         return Verdict.PASS

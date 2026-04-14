@@ -23,10 +23,11 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from pathlib import Path as FsPath
-from typing import Annotated, Any, AsyncIterator
+from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Path, Request
+from fastapi import Depends, FastAPI, HTTPException, Path, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -113,7 +114,7 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
     # ─── browser login (sets a session cookie) ────────────────────────────
 
     @ops_app.get("/login")
-    async def ops_login(token: str = "") -> Any:
+    async def ops_login(token: str = "") -> Any:  # noqa: ANN401
         """Browser login: visit /ops/login?token=<OPS_BEARER_TOKEN> once.
 
         Sets an HttpOnly signed session cookie so subsequent /ops/*
@@ -126,7 +127,7 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
                 detail="invalid token",
             )
         cookie_name, cookie_value, max_age = create_session_cookie("instructor")
-        from starlette.responses import RedirectResponse  # noqa: PLC0415
+        from starlette.responses import RedirectResponse
 
         response = RedirectResponse(url="/ops/", status_code=302)
         response.set_cookie(
@@ -267,7 +268,7 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
                 while True:
                     e = await queue.get()
                     yield {"event": "event", "data": e.to_json_dict(), "id": e.id}
-            except asyncio.CancelledError:
+            except asyncio.CancelledError:  # noqa: TRY203
                 # Client disconnected. Clean up subscriber.
                 raise
             finally:
@@ -326,9 +327,7 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
         new_state = state.switches.flip(switch, by=identity)
         state.events.append(
             Event.now(
-                severity=(
-                    EventSeverity.WARNING if new_state.active else EventSeverity.INFO
-                ),
+                severity=(EventSeverity.WARNING if new_state.active else EventSeverity.INFO),
                 source="ops",
                 kind="kill_switch_flip",
                 summary=(
@@ -365,9 +364,7 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:
         new_state = state.switches.set(switch, active=req.active, by=identity)
         state.events.append(
             Event.now(
-                severity=(
-                    EventSeverity.WARNING if req.active else EventSeverity.INFO
-                ),
+                severity=(EventSeverity.WARNING if req.active else EventSeverity.INFO),
                 source="ops",
                 kind="kill_switch_set",
                 summary=(

@@ -40,11 +40,11 @@ from core.ops.kill_switches import KillSwitch, KillSwitchManager, SwitchState
 
 __all__ = [
     "DEFAULT_EVENT_CAPACITY",
+    "KNOWN_SOURCES",
     "Event",
     "EventSeverity",
     "EventStream",
     "IngestEventRequest",
-    "KNOWN_SOURCES",
     "KillSwitch",
     "KillSwitchManager",
     "OpsState",

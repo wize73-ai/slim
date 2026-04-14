@@ -112,9 +112,7 @@ _REDACT_PATTERNS: Final[tuple[str, ...]] = (
 # Compile a single alternation regex from all patterns. re.IGNORECASE so
 # case variants like "Guapo", "PHI-4-MINI", etc. are also caught. We use
 # ``re.subn`` below so we can count how many redactions happened per pass.
-_REDACT_RE: Final[re.Pattern[str]] = re.compile(
-    "|".join(_REDACT_PATTERNS), re.IGNORECASE
-)
+_REDACT_RE: Final[re.Pattern[str]] = re.compile("|".join(_REDACT_PATTERNS), re.IGNORECASE)
 
 # How many characters to keep buffered for boundary-spanning matches. Set
 # to the longest pattern length plus a margin. The longest pattern is the

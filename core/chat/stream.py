@@ -75,8 +75,8 @@ async def stream_completion(
     """
     # Lazy imports so the module is importable without the openai package
     # for security-boundary tests that only use messages/security.
-    import httpx  # noqa: PLC0415
-    from openai import APIConnectionError, APIStatusError, APITimeoutError  # noqa: PLC0415
+    import httpx
+    from openai import APIConnectionError, APIStatusError, APITimeoutError
 
     client = make_client()
     output_filter = StreamFilter()
@@ -100,15 +100,13 @@ async def stream_completion(
     except (APIConnectionError, httpx.ConnectError) as e:
         raise UpstreamUnavailable("inference server unreachable") from e
     except APIStatusError as e:
-        if 500 <= e.status_code < 600:  # noqa: PLR2004
-            raise UpstreamUnavailable(
-                f"inference server returned {e.status_code}"
-            ) from e
+        if 500 <= e.status_code < 600:
+            raise UpstreamUnavailable(f"inference server returned {e.status_code}") from e
         raise
 
     first_chunk = True
     try:
-        async for chunk in stream:
+        async for chunk in stream:  # type: ignore[union-attr]
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta.content

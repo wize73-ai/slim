@@ -41,9 +41,7 @@ class ContextWindowExceeded(ChatError):
         """Record the requested vs. maximum context size."""
         self.requested_tokens = requested_tokens
         self.max_tokens = max_tokens
-        super().__init__(
-            f"requested {requested_tokens} tokens, model max is {max_tokens}"
-        )
+        super().__init__(f"requested {requested_tokens} tokens, model max is {max_tokens}")
 
 
 class FilterBlocked(ChatError):

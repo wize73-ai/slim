@@ -14,6 +14,7 @@ class review can be enabled by setting ``OPS_EVENT_LOG_PATH``.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 import uuid
 from collections import deque
@@ -48,15 +49,15 @@ class EventSeverity(str, Enum):
 # These let the dashboard filter and color by source as well as severity.
 KNOWN_SOURCES: Final[frozenset[str]] = frozenset(
     {
-        "github",         # PR / commit / merge webhooks
-        "agent",          # PR-agent results from the 9 workflows
-        "deploy",         # CI deploy workflow + slim deploy.sh
-        "firewall",       # nftables drop log tail
-        "agent-proxy",    # CI inference proxy call log
-        "guapo",          # guapo health probe transitions
-        "host",           # slim host stat anomalies
-        "chat",           # app container chat error events
-        "ops",            # ops dashboard internal events (kill switch flips)
+        "github",  # PR / commit / merge webhooks
+        "agent",  # PR-agent results from the 9 workflows
+        "deploy",  # CI deploy workflow + slim deploy.sh
+        "firewall",  # nftables drop log tail
+        "agent-proxy",  # CI inference proxy call log
+        "guapo",  # guapo health probe transitions
+        "host",  # slim host stat anomalies
+        "chat",  # app container chat error events
+        "ops",  # ops dashboard internal events (kill switch flips)
     }
 )
 
@@ -171,10 +172,8 @@ class EventStream:
         self._buffer.append(event)
         # Iterate over a copy so concurrent subscribe/unsubscribe is safe.
         for q in list(self._subscribers):
-            try:
+            with contextlib.suppress(asyncio.QueueFull):
                 q.put_nowait(event)
-            except asyncio.QueueFull:
-                pass
 
     def snapshot(self) -> tuple[Event, ...]:
         """Return an immutable copy of all events currently buffered."""
@@ -224,10 +223,8 @@ class EventStream:
 
         Idempotent — calling on an already-removed queue is a no-op.
         """
-        try:
+        with contextlib.suppress(ValueError):
             self._subscribers.remove(q)
-        except ValueError:
-            pass
 
     @property
     def subscriber_count(self) -> int:

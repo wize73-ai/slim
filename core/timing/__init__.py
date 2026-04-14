@@ -19,6 +19,7 @@ Usage::
 
     from core.timing import instrument
 
+
     async def chat_handler(request):
         with instrument() as t:
             messages = build_request(...)
@@ -40,9 +41,10 @@ from __future__ import annotations
 
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Callable, Literal
+from typing import Literal
 
 __all__ = [
     "Instrument",
@@ -216,7 +218,7 @@ class Instrument:
     bytes to guapo and ``t.mark("t3")`` on receiving the first SSE chunk.
     """
 
-    __slots__ = ("request_id", "_marks")
+    __slots__ = ("_marks", "request_id")
 
     def __init__(self, request_id: str | None = None) -> None:
         """Create an Instrument and capture ``t0`` immediately.
@@ -248,9 +250,9 @@ class Instrument:
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,  # noqa: ARG002 — context-manager protocol
-        exc_val: BaseException | None,  # noqa: ARG002 — context-manager protocol
-        exc_tb: TracebackType | None,  # noqa: ARG002 — context-manager protocol
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Set ``t5``, build the :class:`TimingRecord`, and dispatch to the emitter.
 

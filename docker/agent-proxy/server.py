@@ -79,7 +79,7 @@ logging.basicConfig(
 log = logging.getLogger("agent-proxy")
 
 
-def log_event(**fields: Any) -> None:
+def log_event(**fields: Any) -> None:  # noqa: ANN401
     """Emit one structured log line."""
     fields.setdefault("ts", time.time())
     log.info(json.dumps(fields))
@@ -196,7 +196,7 @@ class ChatCompletionRequest(BaseModel):
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]
+async def lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]  # noqa: ANN201
     """Validate config on startup so misconfiguration fails loudly."""
     if BEARER_TOKEN is None:
         log_event(level="error", msg="AGENT_PROXY_TOKEN env var not set, refusing to start")
@@ -316,7 +316,7 @@ async def agents_llm(
         ) from e
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
-    if response.status_code != 200:  # noqa: PLR2004
+    if response.status_code != 200:
         log_event(
             level="error",
             msg="guapo returned non-200",

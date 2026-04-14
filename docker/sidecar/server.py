@@ -31,7 +31,7 @@ _boot_time: float = 0.0
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]
+async def lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]  # noqa: ANN201
     """Initialise rate-metric baselines on startup.
 
     The ``_app`` parameter is required by FastAPI's lifespan contract

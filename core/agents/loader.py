@@ -12,7 +12,7 @@ happens on every PR-agent CI job anyway).
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +21,7 @@ from typing import Any
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_text(name: str) -> str:
     """Read a markdown prompt template from the prompts directory.
 
@@ -39,7 +39,7 @@ def load_text(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_yaml(name: str) -> Any:  # noqa: ANN401 — YAML loads heterogeneous shapes
     """Load a YAML rule/data file from the prompts directory.
 
@@ -54,7 +54,7 @@ def load_yaml(name: str) -> Any:  # noqa: ANN401 — YAML loads heterogeneous sh
         yaml.YAMLError: If the file is not valid YAML.
     """
     # Lazy import so this module is testable without PyYAML for code-only tests.
-    import yaml  # noqa: PLC0415
+    import yaml
 
     path = PROMPTS_DIR / name
     with path.open(encoding="utf-8") as f:
@@ -73,19 +73,19 @@ def load_red_team_probes() -> list[dict[str, str]]:
 
 def load_classroom_safety_rules() -> dict[str, Any]:
     """Load the tunable classroom safety strictness configuration."""
-    return load_yaml("classroom_safety_rules.yaml")
+    return load_yaml("classroom_safety_rules.yaml")  # type: ignore[no-any-return]
 
 
 def load_lint_explanations() -> dict[str, str]:
     """Load the educational ruff-code → explanation lookup for agent 2."""
-    return load_yaml("lint_explanations.yaml")
+    return load_yaml("lint_explanations.yaml")  # type: ignore[no-any-return]
 
 
 def load_discipline_explanations() -> dict[str, str]:
     """Load the educational hygiene-rule → explanation lookup for agent 6."""
-    return load_yaml("discipline_explanations.yaml")
+    return load_yaml("discipline_explanations.yaml")  # type: ignore[no-any-return]
 
 
-def load_judge_templates() -> dict[str, str]:
+def load_judge_templates() -> dict[str, object]:
     """Load the shared judge prompt templates with verdict sentinel format."""
-    return load_yaml("judge_templates.yaml")
+    return load_yaml("judge_templates.yaml")  # type: ignore[no-any-return]

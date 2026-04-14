@@ -133,7 +133,7 @@ class IndirectProvider:
         present (e.g., during unit tests of the projection layer).
         """
         # Lazy import keeps the module importable in test contexts.
-        import httpx  # noqa: PLC0415
+        import httpx
 
         sample_time = time.monotonic()
         try:
@@ -193,17 +193,12 @@ class IndirectProvider:
         latest = self._samples[-1]
         cutoff = latest.timestamp - _HEALTH_WINDOW_SECONDS
         recent_rtts = [
-            s.rtt_ms
-            for s in self._samples
-            if s.timestamp >= cutoff and s.rtt_ms is not None
+            s.rtt_ms for s in self._samples if s.timestamp >= cutoff and s.rtt_ms is not None
         ]
 
         avg_rtt: float | None
         stddev_rtt: float | None
-        if len(recent_rtts) >= 1:
-            avg_rtt = statistics.mean(recent_rtts)
-        else:
-            avg_rtt = None
+        avg_rtt = statistics.mean(recent_rtts) if len(recent_rtts) >= 1 else None
         if len(recent_rtts) >= _MIN_SAMPLES_FOR_STDDEV:
             stddev_rtt = statistics.pstdev(recent_rtts)
         else:
