@@ -75,8 +75,8 @@ async def stream_completion(  # noqa: C901, PLR0912
     """
     # Lazy imports so the module is importable without the openai package
     # for security-boundary tests that only use messages/security.
-    import httpx  # noqa: PLC0415
-    from openai import APIConnectionError, APIStatusError, APITimeoutError  # noqa: PLC0415
+    import httpx
+    from openai import APIConnectionError, APIStatusError, APITimeoutError
 
     client = make_client()
     output_filter = StreamFilter()

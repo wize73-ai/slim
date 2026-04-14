@@ -54,7 +54,7 @@ def load_yaml(name: str) -> Any:  # noqa: ANN401 — YAML loads heterogeneous sh
         yaml.YAMLError: If the file is not valid YAML.
     """
     # Lazy import so this module is testable without PyYAML for code-only tests.
-    import yaml  # noqa: PLC0415
+    import yaml
 
     path = PROMPTS_DIR / name
     with path.open(encoding="utf-8") as f:

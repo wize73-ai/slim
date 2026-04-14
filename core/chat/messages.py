@@ -13,7 +13,7 @@ history means populating the ``history`` slot, etc.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from core.chat.security import compose_system_prompt
 
@@ -39,7 +39,7 @@ def _get_encoding() -> tiktoken.Encoding:
     """Lazily load the tiktoken encoding on first call."""
     global _encoding  # noqa: PLW0603 — module-level cache is intentional
     if _encoding is None:
-        import tiktoken  # noqa: PLC0415
+        import tiktoken
 
         _encoding = tiktoken.get_encoding(_ENCODING_NAME)
     return _encoding

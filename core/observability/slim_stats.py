@@ -64,7 +64,7 @@ class SlimStatsClient:
 
         # Lazy import so this module is importable without httpx for tests
         # that don't exercise the network path.
-        import httpx  # noqa: PLC0415
+        import httpx
 
         try:
             async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT_SECONDS) as client:

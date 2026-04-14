@@ -133,7 +133,7 @@ class IndirectProvider:
         present (e.g., during unit tests of the projection layer).
         """
         # Lazy import keeps the module importable in test contexts.
-        import httpx  # noqa: PLC0415
+        import httpx
 
         sample_time = time.monotonic()
         try:

@@ -127,7 +127,7 @@ def create_ops_app(state: OpsState | None = None) -> FastAPI:  # noqa: C901, PLR
                 detail="invalid token",
             )
         cookie_name, cookie_value, max_age = create_session_cookie("instructor")
-        from starlette.responses import RedirectResponse  # noqa: PLC0415
+        from starlette.responses import RedirectResponse
 
         response = RedirectResponse(url="/ops/", status_code=302)
         response.set_cookie(

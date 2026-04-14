@@ -105,7 +105,7 @@ async def call_proxy(
         AgentProxyAuthFailed: Proxy returned 401 or 403.
     """
     # Lazy import so this module is testable without httpx installed.
-    import httpx  # noqa: PLC0415
+    import httpx
 
     url = proxy_url or _DEFAULT_PROXY_URL
     token = bearer_token or os.environ.get(_DEFAULT_PROXY_TOKEN_ENV)
